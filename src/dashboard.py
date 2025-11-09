@@ -156,9 +156,11 @@ def page_executive_summary():
         text-align: left;
         margin: 0.5rem 0;
         transition: all 0.3s ease;
-        width: 100%;
-        box-sizing: border-box;
-        min-width: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        min-width: 0 !important;
+        flex: 1 1 0 !important;
     }
     .metric-tile:hover {
         box-shadow: 0 4px 12px rgba(0,0,0,0.12);
