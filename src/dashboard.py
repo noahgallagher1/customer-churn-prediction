@@ -390,24 +390,33 @@ def page_model_performance():
         metrics_df = pd.DataFrame({
             'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 'PR AUC'],
             'Score': [
-                f"{metrics.get('accuracy', 0):.4f}",
-                f"{metrics.get('precision', 0):.4f}",
-                f"{metrics.get('recall', 0):.4f}",
-                f"{metrics.get('f1', 0):.4f}",
-                f"{metrics.get('roc_auc', 0):.4f}",
-                f"{metrics.get('pr_auc', 0):.4f}"
+                metrics.get('accuracy', 0),
+                metrics.get('precision', 0),
+                metrics.get('recall', 0),
+                metrics.get('f1', 0),
+                metrics.get('roc_auc', 0),
+                metrics.get('pr_auc', 0)
             ],
             'Description': [
-                'Overall correctness',
+                'Overall prediction correctness',
                 'Positive prediction accuracy',
                 'True positive detection rate',
-                'Harmonic mean of precision & recall',
+                'Harmonic mean of precision and recall',
                 'Area under ROC curve',
                 'Area under precision-recall curve'
             ]
         })
 
-        st.dataframe(metrics_df, width=150, hide_index=True)
+        st.dataframe(
+            metrics_df,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Metric": st.column_config.TextColumn("Metric", width="medium"),
+                "Score": st.column_config.NumberColumn("Score", format="%.4f", width="small"),
+                "Description": st.column_config.TextColumn("Description", width="large")
+            }
+        )
 
     with col2:
         st.markdown("### 🎯 Model Goal")
