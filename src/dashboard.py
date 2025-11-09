@@ -193,16 +193,19 @@ def page_executive_summary():
                 orientation='h',
                 marker=dict(color=top_features['importance'],
                           colorscale='Reds',
-                          showscale=False)
+                          showscale=False),
+                text=[f"{val:.3f}" for val in top_features['importance']],
+                textposition='outside'
             ))
 
             fig.update_layout(
                 title="Top 10 Churn Predictors",
-                xaxis_title="Importance Score",
-                yaxis_title="Feature",
-                height=400,
+                xaxis_title="Mean Absolute SHAP Value",
+                yaxis_title="",
+                height=500,
                 template=config.PLOTLY_TEMPLATE,
-                yaxis={'categoryorder': 'total ascending'}
+                yaxis={'categoryorder': 'total ascending'},
+                xaxis={'range': [0, top_features['importance'].max() * 1.1]}
             )
 
             st.plotly_chart(fig, width=150)
