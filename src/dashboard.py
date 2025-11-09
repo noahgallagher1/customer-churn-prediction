@@ -196,7 +196,7 @@ def page_executive_summary():
     </style>
     ''', unsafe_allow_html=True)
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
     with col1:
         churn_rate = 26.5
@@ -629,11 +629,12 @@ def page_feature_insights():
         shap_data = None
         for path in possible_paths:
             try:
-                if path.exists():
-                    shap_data = joblib.load(path)
+                if Path(path).exists():
+                    shap_data = joblib.load(str(path))
                     st.success(f"✓ Loaded SHAP data from {path}")
                     break
             except Exception as e:
+                st.error(f"Error loading {path}: {e}")
                 continue
         
         if shap_data is None:
