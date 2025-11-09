@@ -148,37 +148,51 @@ def page_executive_summary():
     st.markdown('''
     <style>
     .metric-tile {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        text-align: center;
-        color: white;
+        background: white;
+        padding: 1.8rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 4px solid;
+        text-align: left;
         margin: 0.5rem 0;
-        transition: transform 0.3s ease;
+        transition: all 0.3s ease;
     }
     .metric-tile:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-    }
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
     }
     .metric-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-        margin-bottom: 0.3rem;
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0.3rem 0;
     }
     .metric-delta {
-        font-size: 0.85rem;
-        margin-top: 0.3rem;
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
     }
-    .tile-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .tile-green { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    .tile-orange { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-    .tile-purple { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .tile-blue { border-left-color: #3b82f6; }
+    .tile-blue .metric-value { color: #1e40af; }
+    .tile-green { border-left-color: #10b981; }
+    .tile-green .metric-value { color: #047857; }
+    .tile-orange { border-left-color: #f59e0b; }
+    .tile-orange .metric-value { color: #d97706; }
+    .tile-purple { border-left-color: #8b5cf6; }
+    .tile-purple .metric-value { color: #6d28d9; }
+    .delta-positive { color: #10b981; }
+    .delta-negative { color: #ef4444; }
     </style>
     ''', unsafe_allow_html=True)
     
@@ -190,7 +204,7 @@ def page_executive_summary():
         <div class="metric-tile tile-blue">
             <div class="metric-label">Overall Churn Rate</div>
             <div class="metric-value">{churn_rate:.1f}%</div>
-            <div class="metric-delta">↓ 2.3% from baseline</div>
+            <div class="metric-delta"><span class="delta-positive">↓ 2.3%</span> from baseline</div>
         </div>
         ''', unsafe_allow_html=True)
 
@@ -200,7 +214,7 @@ def page_executive_summary():
         <div class="metric-tile tile-green">
             <div class="metric-label">Model Accuracy</div>
             <div class="metric-value">{accuracy:.1f}%</div>
-            <div class="metric-delta">Prediction correctness</div>
+            <div class="metric-delta">Overall prediction correctness</div>
         </div>
         ''', unsafe_allow_html=True)
 
@@ -210,7 +224,7 @@ def page_executive_summary():
         <div class="metric-tile tile-orange">
             <div class="metric-label">Churn Detection Rate</div>
             <div class="metric-value">{recall:.1f}%</div>
-            <div class="metric-delta">Catches {recall:.0f} of 100 churners</div>
+            <div class="metric-delta">Identifies {recall:.0f} of 100 at-risk customers</div>
         </div>
         ''', unsafe_allow_html=True)
 
@@ -221,7 +235,7 @@ def page_executive_summary():
         <div class="metric-tile tile-purple">
             <div class="metric-label">Annual Savings</div>
             <div class="metric-value">${net_savings:,.0f}</div>
-            <div class="metric-delta">↑ ${savings_increase:,.0f} potential growth</div>
+            <div class="metric-delta"><span class="delta-positive">↑ ${savings_increase:,.0f}</span> potential growth</div>
         </div>
         ''', unsafe_allow_html=True)
 
