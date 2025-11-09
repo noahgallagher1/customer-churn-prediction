@@ -88,8 +88,21 @@ def load_model_artifacts():
 
         # Load SHAP objects if available
         try:
-            shap_data = joblib.load(config.MODELS_DIR / 'shap_objects.joblib')
-        except:
+            from pathlib import Path
+            # Try multiple possible paths
+            possible_paths = [
+                config.MODELS_DIR / 'shap_objects.joblib',
+                Path('models/shap_objects.joblib'),
+                Path('./models/shap_objects.joblib'),
+                Path('/mount/src/customer-churn-prediction/models/shap_objects.joblib')
+            ]
+            shap_data = None
+            for path in possible_paths:
+                if path.exists():
+                    shap_data = joblib.load(path)
+                    break
+        except Exception as e:
+            print(f"Could not load SHAP data: {e}")
             shap_data = None
 
         # Load all model results for comparison
