@@ -384,7 +384,7 @@ def page_model_performance():
     # Performance Metrics Table
     st.subheader("📊 Performance Metrics")
 
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([3, 2])
 
     with col1:
         metrics_df = pd.DataFrame({
@@ -621,7 +621,7 @@ def page_feature_insights():
     }).sort_values('importance', ascending=False)
 
     # Top features bar chart
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([3, 2])
 
     with col1:
         n_features = st.slider("Number of top features to display", 5, 20, 10)
