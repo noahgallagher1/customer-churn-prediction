@@ -1034,7 +1034,7 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Select Page",
-        ["Executive Summary", "Model Performance", "Feature Insights", "Customer Risk Scoring"],
+        ["Executive Summary", "Model Performance", "Customer Risk Scoring"],
         label_visibility="collapsed"
     )
 
@@ -1060,8 +1060,6 @@ def main():
         page_executive_summary()
     elif page == "Model Performance":
         page_model_performance()
-    elif page == "Feature Insights":
-        page_feature_insights()
     elif page == "Customer Risk Scoring":
         page_customer_risk_scoring()
 
