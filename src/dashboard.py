@@ -613,9 +613,35 @@ def page_feature_insights():
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
 
+    # Try multiple paths to find SHAP data
     if shap_data is None:
-        st.warning("⚠️ SHAP analysis not found. Please run: python src/explainability.py")
-        return
+        from pathlib import Path
+        import os
+        
+        # Try different possible locations
+        possible_paths = [
+            config.MODELS_DIR / 'shap_objects.joblib',
+            Path('models/shap_objects.joblib'),
+            Path('./models/shap_objects.joblib'),
+            Path(__file__).parent.parent / 'models' / 'shap_objects.joblib'
+        ]
+        
+        shap_data = None
+        for path in possible_paths:
+            try:
+                if path.exists():
+                    shap_data = joblib.load(path)
+                    st.success(f"✓ Loaded SHAP data from {path}")
+                    break
+            except Exception as e:
+                continue
+        
+        if shap_data is None:
+            st.warning("⚠️ SHAP analysis not found. Please run: python src/explainability.py")
+            st.info(f"Searched paths: {[str(p) for p in possible_paths]}")
+            st.info(f"Current directory: {os.getcwd()}")
+            st.info(f"Files in models/: {list(Path('models').glob('*')) if Path('models').exists() else 'models/ not found'}")
+            return
 
     shap_values = shap_data['shap_values']
     X_sample = shap_data['X_sample']
