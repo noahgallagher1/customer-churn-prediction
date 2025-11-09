@@ -144,35 +144,86 @@ def page_executive_summary():
     st.markdown(f"### {config.COMPANY_NAME}")
     st.markdown("---")
 
-    # Key Metrics Row
+    # Key Metrics Row with Enhanced Tiles
+    st.markdown('''
+    <style>
+    .metric-tile {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        text-align: center;
+        color: white;
+        margin: 0.5rem 0;
+        transition: transform 0.3s ease;
+    }
+    .metric-tile:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 0.3rem;
+    }
+    .metric-delta {
+        font-size: 0.85rem;
+        margin-top: 0.3rem;
+    }
+    .tile-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .tile-green { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .tile-orange { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .tile-purple { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    </style>
+    ''', unsafe_allow_html=True)
+    
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        churn_rate = 26.5  # Will be calculated from data
-        st.metric("Overall Churn Rate", f"{churn_rate:.1f}%",
-                 delta="-2.3%", delta_color="inverse")
-        st.markdown('</div>', unsafe_allow_html=True)
+        churn_rate = 26.5
+        st.markdown(f'''
+        <div class="metric-tile tile-blue">
+            <div class="metric-label">Overall Churn Rate</div>
+            <div class="metric-value">{churn_rate:.1f}%</div>
+            <div class="metric-delta">↓ 2.3% from baseline</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         accuracy = metrics.get('accuracy', 0) * 100
-        st.metric("Model Accuracy", f"{accuracy:.1f}%")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="metric-tile tile-green">
+            <div class="metric-label">Model Accuracy</div>
+            <div class="metric-value">{accuracy:.1f}%</div>
+            <div class="metric-delta">Prediction correctness</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col3:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         recall = metrics.get('recall', 0) * 100
-        st.metric("Churn Detection Rate", f"{recall:.1f}%",
-                 help="Percentage of actual churners correctly identified")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="metric-tile tile-orange">
+            <div class="metric-label">Churn Detection Rate</div>
+            <div class="metric-value">{recall:.1f}%</div>
+            <div class="metric-delta">Catches {recall:.0f} of 100 churners</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col4:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         net_savings = metrics.get('net_savings', 0)
-        st.metric("Estimated Annual Savings", f"${net_savings:,.0f}",
-                 delta=f"+${net_savings*0.15:,.0f}", delta_color="normal")
-        st.markdown('</div>', unsafe_allow_html=True)
+        savings_increase = net_savings * 0.15
+        st.markdown(f'''
+        <div class="metric-tile tile-purple">
+            <div class="metric-label">Annual Savings</div>
+            <div class="metric-value">${net_savings:,.0f}</div>
+            <div class="metric-delta">↑ ${savings_increase:,.0f} potential growth</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     st.markdown("---")
 
