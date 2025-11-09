@@ -49,9 +49,6 @@ venv.bak/
 # data/processed/*.csv
 
 # Model artifacts (large files)
-models/*.joblib
-models/*.pkl
-models/*.h5
 
 # Logs
 logs/*.log

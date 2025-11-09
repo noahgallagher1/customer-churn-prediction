@@ -360,7 +360,7 @@ def generate_business_insights(
 
     for idx, row in top_features.iterrows():
         feature = row['feature']
-        importance = row['mean_abs_shap']
+        importance = row.get('mean_abs_shap', row.get('importance', 0))
 
         # Find matching insight
         insight = next(
