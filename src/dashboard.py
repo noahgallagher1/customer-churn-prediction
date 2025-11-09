@@ -273,7 +273,7 @@ def page_executive_summary():
                 xaxis={'range': [0, top_features['importance'].max() * 1.1]}
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         except Exception as e:
             st.info("Run the explainability pipeline to generate feature importance.")
@@ -310,7 +310,7 @@ def page_executive_summary():
         ))
 
         fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         # Impact metrics
         col_a, col_b = st.columns(2)
@@ -458,7 +458,7 @@ def page_model_performance():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     with col_metrics:
         # Business metrics
@@ -523,7 +523,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     with col_pr:
         st.markdown("#### Precision-Recall Curve")
@@ -549,7 +549,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # Model Comparison
     if all_results is not None:
@@ -590,7 +590,7 @@ def page_model_performance():
             template=config.PLOTLY_TEMPLATE
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         # Show table
         st.dataframe(comparison_df.style.highlight_max(axis=0, props='background-color: lightgreen'),
@@ -649,7 +649,7 @@ def page_feature_insights():
             yaxis={'categoryorder': 'total ascending'}
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     with col2:
         st.markdown("### 🎯 Interpretation")
@@ -753,7 +753,7 @@ def page_feature_insights():
             template=config.PLOTLY_TEMPLATE
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def page_customer_risk_scoring():
@@ -890,7 +890,7 @@ def page_customer_risk_scoring():
     ))
 
     fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # SHAP Explanation
     if shap_data is not None:
