@@ -4,8 +4,7 @@ Interactive Streamlit Dashboard for Customer Churn Prediction.
 This multi-page dashboard provides:
 1. Executive Summary
 2. Model Performance
-3. Feature Insights
-4. Customer Risk Scoring
+3. Customer Risk Scoring
 """
 
 import streamlit as st
@@ -105,6 +104,18 @@ st.markdown("""
         max-width: 300px !important;
     }
 
+    /* Fix column layout - let columns share space properly */
+    div[data-testid="column"] {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 0 0.5rem !important;
+    }
+
+    /* Remove any max-width constraints */
+    [data-testid="stAppViewContainer"] {
+        max-width: 100% !important;
+    }
+
     /* Header styling */
     .main-header {
         font-size: 2.5rem;
@@ -148,18 +159,6 @@ st.markdown("""
         border-radius: 0.5rem;
         border-left: 4px solid #dc3545;
     }
-
-    /* Fix column layout - let columns share space properly */
-    div[data-testid="column"] {
-        flex: 1 1 0 !important;
-        min-width: 0 !important;
-        padding: 0 0.5rem !important;
-    }
-
-    /* Remove any max-width constraints */
-    [data-testid="stAppViewContainer"] {
-        max-width: 100% !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -175,8 +174,21 @@ def load_model_artifacts():
 
         # Load SHAP objects if available
         try:
-            shap_data = joblib.load(config.MODELS_DIR / 'shap_objects.joblib')
-        except:
+            from pathlib import Path
+            # Try multiple possible paths
+            possible_paths = [
+                config.MODELS_DIR / 'shap_objects.joblib',
+                Path('models/shap_objects.joblib'),
+                Path('./models/shap_objects.joblib'),
+                Path('/mount/src/customer-churn-prediction/models/shap_objects.joblib')
+            ]
+            shap_data = None
+            for path in possible_paths:
+                if path.exists():
+                    shap_data = joblib.load(path)
+                    break
+        except Exception as e:
+            print(f"Could not load SHAP data: {e}")
             shap_data = None
 
         # Load all model results for comparison
@@ -218,35 +230,100 @@ def page_executive_summary():
     st.markdown(f"### {config.COMPANY_NAME}")
     st.markdown("---")
 
-    # Key Metrics Row
-    col1, col2, col3, col4 = st.columns(4)
+    # Key Metrics Row with Enhanced Tiles
+    st.markdown('''
+    <style>
+    .metric-tile {
+        background: white;
+        padding: 1.8rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 4px solid;
+        text-align: left;
+        margin: 0.5rem 0;
+        transition: all 0.3s ease;
+    }
+    .metric-tile:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0.3rem 0;
+    }
+    .metric-delta {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .tile-blue { border-left-color: #3b82f6; }
+    .tile-blue .metric-value { color: #1e40af; }
+    .tile-green { border-left-color: #10b981; }
+    .tile-green .metric-value { color: #047857; }
+    .tile-orange { border-left-color: #f59e0b; }
+    .tile-orange .metric-value { color: #d97706; }
+    .tile-purple { border-left-color: #8b5cf6; }
+    .tile-purple .metric-value { color: #6d28d9; }
+    .delta-positive { color: #10b981; }
+    .delta-negative { color: #ef4444; }
+    </style>
+    ''', unsafe_allow_html=True)
+
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
     with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        churn_rate = 26.5  # Will be calculated from data
-        st.metric("Overall Churn Rate", f"{churn_rate:.1f}%",
-                 delta="-2.3%", delta_color="inverse")
-        st.markdown('</div>', unsafe_allow_html=True)
+        churn_rate = 26.5
+        st.markdown(f'''
+        <div class="metric-tile tile-blue">
+            <div class="metric-label">Overall Churn Rate</div>
+            <div class="metric-value">{churn_rate:.1f}%</div>
+            <div class="metric-delta"><span class="delta-positive">↓ 2.3%</span> from baseline</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         accuracy = metrics.get('accuracy', 0) * 100
-        st.metric("Model Accuracy", f"{accuracy:.1f}%")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="metric-tile tile-green">
+            <div class="metric-label">Model Accuracy</div>
+            <div class="metric-value">{accuracy:.1f}%</div>
+            <div class="metric-delta">Overall prediction correctness</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col3:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         recall = metrics.get('recall', 0) * 100
-        st.metric("Churn Detection Rate", f"{recall:.1f}%",
-                 help="Percentage of actual churners correctly identified")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="metric-tile tile-orange">
+            <div class="metric-label">Churn Detection Rate</div>
+            <div class="metric-value">{recall:.1f}%</div>
+            <div class="metric-delta">Identifies {recall:.0f} of 100 at-risk customers</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col4:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         net_savings = metrics.get('net_savings', 0)
-        st.metric("Estimated Annual Savings", f"${net_savings:,.0f}",
-                 delta=f"+${net_savings*0.15:,.0f}", delta_color="normal")
-        st.markdown('</div>', unsafe_allow_html=True)
+        savings_increase = net_savings * 0.15
+        st.markdown(f'''
+        <div class="metric-tile tile-purple">
+            <div class="metric-label">Annual Savings</div>
+            <div class="metric-value">${net_savings:,.0f}</div>
+            <div class="metric-delta"><span class="delta-positive">↑ ${savings_increase:,.0f}</span> potential growth</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -267,16 +344,19 @@ def page_executive_summary():
                 orientation='h',
                 marker=dict(color=top_features['importance'],
                           colorscale='Reds',
-                          showscale=False)
+                          showscale=False),
+                text=[f"{val:.3f}" for val in top_features['importance']],
+                textposition='outside'
             ))
 
             fig.update_layout(
                 title="Top 10 Churn Predictors",
-                xaxis_title="Importance Score",
-                yaxis_title="Feature",
-                height=400,
+                xaxis_title="Mean Absolute SHAP Value",
+                yaxis_title="",
+                height=500,
                 template=config.PLOTLY_TEMPLATE,
-                yaxis={'categoryorder': 'total ascending'}
+                yaxis={'categoryorder': 'total ascending'},
+                xaxis={'range': [0, top_features['importance'].max() * 1.1]}
             )
 
             st.plotly_chart(fig, use_container_width=True)
@@ -293,7 +373,7 @@ def page_executive_summary():
         customers_lost = metrics.get('customers_lost', 0)
 
         # Create gauge chart for ROI with dynamic range
-        # Calculate appropriate max range (at least 100% above actual value, minimum 300)
+        # Calculate appropriate max range (at least 30% above actual value, minimum 300)
         gauge_max = max(300, int((roi * 1.3) // 100) * 100)  # Round up to nearest 100
 
         fig = go.Figure(go.Indicator(
@@ -407,24 +487,33 @@ def page_model_performance():
         metrics_df = pd.DataFrame({
             'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 'PR AUC'],
             'Score': [
-                f"{metrics.get('accuracy', 0):.4f}",
-                f"{metrics.get('precision', 0):.4f}",
-                f"{metrics.get('recall', 0):.4f}",
-                f"{metrics.get('f1', 0):.4f}",
-                f"{metrics.get('roc_auc', 0):.4f}",
-                f"{metrics.get('pr_auc', 0):.4f}"
+                metrics.get('accuracy', 0),
+                metrics.get('precision', 0),
+                metrics.get('recall', 0),
+                metrics.get('f1', 0),
+                metrics.get('roc_auc', 0),
+                metrics.get('pr_auc', 0)
             ],
             'Description': [
-                'Overall correctness',
+                'Overall prediction correctness',
                 'Positive prediction accuracy',
                 'True positive detection rate',
-                'Harmonic mean of precision & recall',
+                'Harmonic mean of precision and recall',
                 'Area under ROC curve',
                 'Area under precision-recall curve'
             ]
         })
 
-        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            metrics_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Metric": st.column_config.TextColumn("Metric", width="medium"),
+                "Score": st.column_config.NumberColumn("Score", format="%.4f", width="small"),
+                "Description": st.column_config.TextColumn("Description", width="large")
+            }
+        )
 
     with col2:
         st.markdown("### 🎯 Model Goal")
@@ -612,165 +701,6 @@ def page_model_performance():
         # Show table
         st.dataframe(comparison_df.style.highlight_max(axis=0, props='background-color: lightgreen'),
                     use_container_width=True, hide_index=True)
-
-
-def page_feature_insights():
-    """Page 3: Feature Insights."""
-    st.markdown('<h1 class="main-header">🔍 Feature Insights</h1>', unsafe_allow_html=True)
-
-    # Load artifacts
-    model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
-
-    if shap_data is None:
-        st.warning("⚠️ SHAP analysis not found. Please run: python src/explainability.py")
-        return
-
-    shap_values = shap_data['shap_values']
-    X_sample = shap_data['X_sample']
-
-    # Feature Importance Overview
-    st.subheader("📊 Global Feature Importance")
-
-    # Calculate feature importance
-    feature_importance = pd.DataFrame({
-        'feature': X_sample.columns,
-        'importance': np.abs(shap_values).mean(axis=0)
-    }).sort_values('importance', ascending=False)
-
-    # Top features bar chart
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        n_features = st.slider("Number of top features to display", 5, 20, 10)
-
-        top_features = feature_importance.head(n_features)
-
-        fig = go.Figure(go.Bar(
-            x=top_features['importance'],
-            y=top_features['feature'],
-            orientation='h',
-            marker=dict(
-                color=top_features['importance'],
-                colorscale='Viridis',
-                showscale=True,
-                colorbar=dict(title="Importance")
-            )
-        ))
-
-        fig.update_layout(
-            title=f"Top {n_features} Most Important Features",
-            xaxis_title="Mean |SHAP Value|",
-            yaxis_title="Feature",
-            height=max(400, n_features * 30),
-            template=config.PLOTLY_TEMPLATE,
-            yaxis={'categoryorder': 'total ascending'}
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.markdown("### 🎯 Interpretation")
-        st.markdown("""
-        <div class="insight-box">
-        <b>SHAP Values</b> show how much each feature contributes to pushing
-        the prediction higher (toward churn) or lower (toward retention).
-        <br><br>
-        <b>Higher values</b> = More important for prediction
-        <br><br>
-        <b>Use this to:</b>
-        <ul>
-            <li>Identify key churn drivers</li>
-            <li>Focus retention efforts</li>
-            <li>Improve services</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # SHAP Summary Plot
-    st.markdown("---")
-    st.subheader("🎨 SHAP Summary Plot")
-
-    st.info("This plot shows the distribution of SHAP values for each feature. " +
-           "Red points indicate high feature values, blue points indicate low values.")
-
-    # Create matplotlib figure for SHAP summary
-    fig, ax = plt.subplots(figsize=(14, 10))
-    shap.summary_plot(shap_values, X_sample, max_display=15, show=False)
-    st.pyplot(fig, use_container_width=True)
-    plt.close()
-
-    # Feature Deep Dive
-    st.markdown("---")
-    st.subheader("🔬 Feature Deep Dive")
-
-    # Select feature for dependence plot
-    selected_feature = st.selectbox(
-        "Select a feature to analyze:",
-        options=feature_importance['feature'].head(20).tolist()
-    )
-
-    col_dep1, col_dep2 = st.columns([2, 1])
-
-    with col_dep1:
-        # SHAP dependence plot
-        fig, ax = plt.subplots(figsize=(12, 7))
-        shap.dependence_plot(
-            selected_feature,
-            shap_values,
-            X_sample,
-            show=False,
-            ax=ax
-        )
-        st.pyplot(fig, use_container_width=True)
-        plt.close()
-
-    with col_dep2:
-        st.markdown(f"### Analysis: {selected_feature}")
-
-        # Feature statistics
-        feature_stats = X_sample[selected_feature].describe()
-        st.markdown("**Statistics:**")
-        st.dataframe(feature_stats, use_container_width=True)
-
-        # SHAP value statistics
-        feature_idx = list(X_sample.columns).index(selected_feature)
-        shap_stats = pd.Series(shap_values[:, feature_idx]).describe()
-        st.markdown("**SHAP Value Statistics:**")
-        st.dataframe(shap_stats, use_container_width=True)
-
-    # Correlation Heatmap
-    st.markdown("---")
-    st.subheader("🔗 Feature Correlations")
-
-    # Select features for correlation
-    selected_features_corr = st.multiselect(
-        "Select features for correlation analysis:",
-        options=feature_importance['feature'].head(15).tolist(),
-        default=feature_importance['feature'].head(5).tolist()
-    )
-
-    if len(selected_features_corr) > 1:
-        corr_matrix = X_sample[selected_features_corr].corr()
-
-        fig = go.Figure(data=go.Heatmap(
-            z=corr_matrix.values,
-            x=corr_matrix.columns,
-            y=corr_matrix.index,
-            colorscale='RdBu',
-            zmid=0,
-            text=corr_matrix.values.round(2),
-            texttemplate='%{text}',
-            textfont={"size": 10},
-            colorbar=dict(title="Correlation")
-        ))
-
-        fig.update_layout(
-            title="Feature Correlation Matrix",
-            height=600,
-            template=config.PLOTLY_TEMPLATE
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
 
 
 def page_customer_risk_scoring():
@@ -1010,7 +940,7 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Select Page",
-        ["Executive Summary", "Model Performance", "Feature Insights", "Customer Risk Scoring"],
+        ["Executive Summary", "Model Performance", "Customer Risk Scoring"],
         label_visibility="collapsed"
     )
 
@@ -1036,8 +966,6 @@ def main():
         page_executive_summary()
     elif page == "Model Performance":
         page_model_performance()
-    elif page == "Feature Insights":
-        page_feature_insights()
     elif page == "Customer Risk Scoring":
         page_customer_risk_scoring()
 
