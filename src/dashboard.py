@@ -33,45 +33,134 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# AGGRESSIVE CSS - PERMANENT FULL WIDTH FIX
 st.markdown("""
 <style>
+    /* FORCE full width - override ALL Streamlit defaults with !important */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Main content area - FORCE 100% width */
+    .main .block-container {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    /* Override app view container */
+    .appview-container .main .block-container {
+        max-width: 100% !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    /* Remove ALL default margins */
+    .element-container {
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    /* FORCE full width on all plots and charts */
+    .stPlotlyChart {
+        width: 100% !important;
+    }
+
+    /* FORCE full width on matplotlib figures */
+    .stpyplot {
+        width: 100% !important;
+    }
+
+    /* FORCE full width on dataframes */
+    .stDataFrame {
+        width: 100% !important;
+    }
+
+    /* FORCE full width on all div containers */
+    div[data-testid="stVerticalBlock"] {
+        width: 100% !important;
+    }
+
+    div[data-testid="stHorizontalBlock"] {
+        width: 100% !important;
+    }
+
+    /* Remove padding from main app container */
+    .main {
+        padding: 0 !important;
+    }
+
+    /* Sidebar - fixed width */
+    section[data-testid="stSidebar"] {
+        width: 300px !important;
+        min-width: 300px !important;
+        max-width: 300px !important;
+    }
+
+    /* Header styling */
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
         color: #1f77b4;
         text-align: center;
         padding: 1rem 0;
+        width: 100%;
     }
+
+    /* Metric cards */
     .metric-card {
         background-color: #f0f2f6;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #1f77b4;
+        width: 100%;
     }
+
+    /* Info boxes */
     .insight-box {
         background-color: #e8f4f8;
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
+        width: 100%;
     }
     .warning-box {
         background-color: #fff3cd;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #ffc107;
+        width: 100%;
     }
     .success-box {
         background-color: #d4edda;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #28a745;
+        width: 100%;
     }
     .danger-box {
         background-color: #f8d7da;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #dc3545;
+        width: 100%;
+    }
+
+    /* FORCE columns to use full width */
+    div[data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 auto !important;
+    }
+
+    /* Remove any max-width constraints */
+    [data-testid="stAppViewContainer"] {
+        max-width: 100% !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -88,21 +177,8 @@ def load_model_artifacts():
 
         # Load SHAP objects if available
         try:
-            from pathlib import Path
-            # Try multiple possible paths
-            possible_paths = [
-                config.MODELS_DIR / 'shap_objects.joblib',
-                Path('models/shap_objects.joblib'),
-                Path('./models/shap_objects.joblib'),
-                Path('/mount/src/customer-churn-prediction/models/shap_objects.joblib')
-            ]
-            shap_data = None
-            for path in possible_paths:
-                if path.exists():
-                    shap_data = joblib.load(path)
-                    break
-        except Exception as e:
-            print(f"Could not load SHAP data: {e}")
+            shap_data = joblib.load(config.MODELS_DIR / 'shap_objects.joblib')
+        except:
             shap_data = None
 
         # Load all model results for comparison
@@ -144,110 +220,35 @@ def page_executive_summary():
     st.markdown(f"### {config.COMPANY_NAME}")
     st.markdown("---")
 
-    # Key Metrics Row with Enhanced Tiles
-    st.markdown('''
-    <style>
-    .metric-tile {
-        background: white;
-        padding: 1.8rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 4px solid;
-        text-align: left;
-        margin: 0.5rem 0;
-        transition: all 0.3s ease;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        min-width: 0 !important;
-        flex: 1 1 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        min-width: 0 !important;
-        flex: 1 1 0 !important;
-    }
-    .metric-tile:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        transform: translateY(-2px);
-    }
-    .metric-label {
-        font-size: 0.85rem;
-        color: #64748b;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin: 0.3rem 0;
-    }
-    .metric-delta {
-        font-size: 0.8rem;
-        color: #64748b;
-        margin-top: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-    }
-    .tile-blue { border-left-color: #3b82f6; }
-    .tile-blue .metric-value { color: #1e40af; }
-    .tile-green { border-left-color: #10b981; }
-    .tile-green .metric-value { color: #047857; }
-    .tile-orange { border-left-color: #f59e0b; }
-    .tile-orange .metric-value { color: #d97706; }
-    .tile-purple { border-left-color: #8b5cf6; }
-    .tile-purple .metric-value { color: #6d28d9; }
-    .delta-positive { color: #10b981; }
-    .delta-negative { color: #ef4444; }
-    </style>
-    ''', unsafe_allow_html=True)
-    
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+    # Key Metrics Row
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        churn_rate = 26.5
-        st.markdown(f'''
-        <div class="metric-tile tile-blue">
-            <div class="metric-label">Overall Churn Rate</div>
-            <div class="metric-value">{churn_rate:.1f}%</div>
-            <div class="metric-delta"><span class="delta-positive">↓ 2.3%</span> from baseline</div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        churn_rate = 26.5  # Will be calculated from data
+        st.metric("Overall Churn Rate", f"{churn_rate:.1f}%",
+                 delta="-2.3%", delta_color="inverse")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         accuracy = metrics.get('accuracy', 0) * 100
-        st.markdown(f'''
-        <div class="metric-tile tile-green">
-            <div class="metric-label">Model Accuracy</div>
-            <div class="metric-value">{accuracy:.1f}%</div>
-            <div class="metric-delta">Overall prediction correctness</div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.metric("Model Accuracy", f"{accuracy:.1f}%")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col3:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         recall = metrics.get('recall', 0) * 100
-        st.markdown(f'''
-        <div class="metric-tile tile-orange">
-            <div class="metric-label">Churn Detection Rate</div>
-            <div class="metric-value">{recall:.1f}%</div>
-            <div class="metric-delta">Identifies {recall:.0f} of 100 at-risk customers</div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.metric("Churn Detection Rate", f"{recall:.1f}%",
+                 help="Percentage of actual churners correctly identified")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col4:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
         net_savings = metrics.get('net_savings', 0)
-        savings_increase = net_savings * 0.15
-        st.markdown(f'''
-        <div class="metric-tile tile-purple">
-            <div class="metric-label">Annual Savings</div>
-            <div class="metric-value">${net_savings:,.0f}</div>
-            <div class="metric-delta"><span class="delta-positive">↑ ${savings_increase:,.0f}</span> potential growth</div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.metric("Estimated Annual Savings", f"${net_savings:,.0f}",
+                 delta=f"+${net_savings*0.15:,.0f}", delta_color="normal")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -268,22 +269,19 @@ def page_executive_summary():
                 orientation='h',
                 marker=dict(color=top_features['importance'],
                           colorscale='Reds',
-                          showscale=False),
-                text=[f"{val:.3f}" for val in top_features['importance']],
-                textposition='outside'
+                          showscale=False)
             ))
 
             fig.update_layout(
                 title="Top 10 Churn Predictors",
-                xaxis_title="Mean Absolute SHAP Value",
-                yaxis_title="",
-                height=500,
+                xaxis_title="Importance Score",
+                yaxis_title="Feature",
+                height=400,
                 template=config.PLOTLY_TEMPLATE,
-                yaxis={'categoryorder': 'total ascending'},
-                xaxis={'range': [0, top_features['importance'].max() * 1.1]}
+                yaxis={'categoryorder': 'total ascending'}
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
         except Exception as e:
             st.info("Run the explainability pipeline to generate feature importance.")
@@ -320,7 +318,7 @@ def page_executive_summary():
         ))
 
         fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
         # Impact metrics
         col_a, col_b = st.columns(2)
@@ -400,33 +398,24 @@ def page_model_performance():
         metrics_df = pd.DataFrame({
             'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 'PR AUC'],
             'Score': [
-                metrics.get('accuracy', 0),
-                metrics.get('precision', 0),
-                metrics.get('recall', 0),
-                metrics.get('f1', 0),
-                metrics.get('roc_auc', 0),
-                metrics.get('pr_auc', 0)
+                f"{metrics.get('accuracy', 0):.4f}",
+                f"{metrics.get('precision', 0):.4f}",
+                f"{metrics.get('recall', 0):.4f}",
+                f"{metrics.get('f1', 0):.4f}",
+                f"{metrics.get('roc_auc', 0):.4f}",
+                f"{metrics.get('pr_auc', 0):.4f}"
             ],
             'Description': [
-                'Overall prediction correctness',
+                'Overall correctness',
                 'Positive prediction accuracy',
                 'True positive detection rate',
-                'Harmonic mean of precision and recall',
+                'Harmonic mean of precision & recall',
                 'Area under ROC curve',
                 'Area under precision-recall curve'
             ]
         })
 
-        st.dataframe(
-            metrics_df,
-            width="stretch",
-            hide_index=True,
-            column_config={
-                "Metric": st.column_config.TextColumn("Metric", width="medium"),
-                "Score": st.column_config.NumberColumn("Score", format="%.4f", width="small"),
-                "Description": st.column_config.TextColumn("Description", width="large")
-            }
-        )
+        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
 
     with col2:
         st.markdown("### 🎯 Model Goal")
@@ -477,7 +466,7 @@ def page_model_performance():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
     with col_metrics:
         # Business metrics
@@ -504,7 +493,7 @@ def page_model_performance():
             ]
         })
 
-        st.dataframe(business_metrics, width=150, hide_index=True)
+        st.dataframe(business_metrics, use_container_width=True, hide_index=True)
 
     # ROC and PR Curves
     st.markdown("---")
@@ -542,7 +531,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
     with col_pr:
         st.markdown("#### Precision-Recall Curve")
@@ -568,7 +557,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
     # Model Comparison
     if all_results is not None:
@@ -609,11 +598,11 @@ def page_model_performance():
             template=config.PLOTLY_TEMPLATE
         )
 
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
         # Show table
         st.dataframe(comparison_df.style.highlight_max(axis=0, props='background-color: lightgreen'),
-                    width=150, hide_index=True)
+                    use_container_width=True, hide_index=True)
 
 
 def page_feature_insights():
@@ -623,36 +612,9 @@ def page_feature_insights():
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
 
-    # Try multiple paths to find SHAP data
     if shap_data is None:
-        from pathlib import Path
-        import os
-        
-        # Try different possible locations
-        possible_paths = [
-            config.MODELS_DIR / 'shap_objects.joblib',
-            Path('models/shap_objects.joblib'),
-            Path('./models/shap_objects.joblib'),
-            Path(__file__).parent.parent / 'models' / 'shap_objects.joblib'
-        ]
-        
-        shap_data = None
-        for path in possible_paths:
-            try:
-                if Path(path).exists():
-                    shap_data = joblib.load(str(path))
-                    st.success(f"✓ Loaded SHAP data from {path}")
-                    break
-            except Exception as e:
-                st.error(f"Error loading {path}: {e}")
-                continue
-        
-        if shap_data is None:
-            st.warning("⚠️ SHAP analysis not found. Please run: python src/explainability.py")
-            st.info(f"Searched paths: {[str(p) for p in possible_paths]}")
-            st.info(f"Current directory: {os.getcwd()}")
-            st.info(f"Files in models/: {list(Path('models').glob('*')) if Path('models').exists() else 'models/ not found'}")
-            return
+        st.warning("⚠️ SHAP analysis not found. Please run: python src/explainability.py")
+        return
 
     shap_values = shap_data['shap_values']
     X_sample = shap_data['X_sample']
@@ -695,7 +657,7 @@ def page_feature_insights():
             yaxis={'categoryorder': 'total ascending'}
         )
 
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         st.markdown("### 🎯 Interpretation")
@@ -723,9 +685,9 @@ def page_feature_insights():
            "Red points indicate high feature values, blue points indicate low values.")
 
     # Create matplotlib figure for SHAP summary
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(14, 10))
     shap.summary_plot(shap_values, X_sample, max_display=15, show=False)
-    st.pyplot(fig)
+    st.pyplot(fig, use_container_width=True)
     plt.close()
 
     # Feature Deep Dive
@@ -742,7 +704,7 @@ def page_feature_insights():
 
     with col_dep1:
         # SHAP dependence plot
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(12, 7))
         shap.dependence_plot(
             selected_feature,
             shap_values,
@@ -750,7 +712,7 @@ def page_feature_insights():
             show=False,
             ax=ax
         )
-        st.pyplot(fig)
+        st.pyplot(fig, use_container_width=True)
         plt.close()
 
     with col_dep2:
@@ -759,13 +721,13 @@ def page_feature_insights():
         # Feature statistics
         feature_stats = X_sample[selected_feature].describe()
         st.markdown("**Statistics:**")
-        st.dataframe(feature_stats, width=150)
+        st.dataframe(feature_stats, use_container_width=True)
 
         # SHAP value statistics
         feature_idx = list(X_sample.columns).index(selected_feature)
         shap_stats = pd.Series(shap_values[:, feature_idx]).describe()
         st.markdown("**SHAP Value Statistics:**")
-        st.dataframe(shap_stats, width=150)
+        st.dataframe(shap_stats, use_container_width=True)
 
     # Correlation Heatmap
     st.markdown("---")
@@ -799,7 +761,7 @@ def page_feature_insights():
             template=config.PLOTLY_TEMPLATE
         )
 
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def page_customer_risk_scoring():
@@ -936,7 +898,7 @@ def page_customer_risk_scoring():
     ))
 
     fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
     # SHAP Explanation
     if shap_data is not None:
@@ -954,7 +916,7 @@ def page_customer_risk_scoring():
             # Waterfall plot
             st.markdown("#### Feature Contributions")
 
-            fig, ax = plt.subplots(figsize=(10, 8))
+            fig, ax = plt.subplots(figsize=(14, 10))
 
             expected_value = explainer.expected_value
             if isinstance(expected_value, (list, np.ndarray)):
@@ -968,7 +930,7 @@ def page_customer_risk_scoring():
             )
 
             shap.plots.waterfall(shap_exp, show=False)
-            st.pyplot(fig)
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
         except Exception as e:
@@ -1034,12 +996,12 @@ def main():
 
     # Sidebar
     st.sidebar.image("https://via.placeholder.com/150x50/1f77b4/ffffff?text=TelcoConnect",
-                     width=150)
+                     use_container_width=True)
 
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Select Page",
-        ["Executive Summary", "Model Performance", "Customer Risk Scoring"],
+        ["Executive Summary", "Model Performance", "Feature Insights", "Customer Risk Scoring"],
         label_visibility="collapsed"
     )
 
@@ -1065,6 +1027,8 @@ def main():
         page_executive_summary()
     elif page == "Model Performance":
         page_model_performance()
+    elif page == "Feature Insights":
+        page_feature_insights()
     elif page == "Customer Risk Scoring":
         page_customer_risk_scoring()
 
