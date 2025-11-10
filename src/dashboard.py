@@ -61,10 +61,9 @@ st.markdown("""
         padding-right: 0.5rem !important;
     }
 
-    /* Remove ALL default margins */
+    /* Remove excessive margins but preserve layout */
     .element-container {
         margin: 0 !important;
-        width: 100% !important;
     }
 
     /* FORCE full width on all plots and charts */
@@ -82,13 +81,16 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* FORCE full width on all div containers */
+    /* Full width vertical blocks */
     div[data-testid="stVerticalBlock"] {
         width: 100% !important;
     }
 
+    /* Horizontal blocks (columns container) - let flex handle it */
     div[data-testid="stHorizontalBlock"] {
         width: 100% !important;
+        display: flex !important;
+        gap: 1rem !important;
     }
 
     /* Remove padding from main app container */
@@ -113,49 +115,45 @@ st.markdown("""
         width: 100%;
     }
 
-    /* Metric cards */
+    /* Metric cards - fit within columns */
     .metric-card {
         background-color: #f0f2f6;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #1f77b4;
-        width: 100%;
     }
 
-    /* Info boxes */
+    /* Info boxes - adapt to container */
     .insight-box {
         background-color: #e8f4f8;
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
-        width: 100%;
     }
     .warning-box {
         background-color: #fff3cd;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #ffc107;
-        width: 100%;
     }
     .success-box {
         background-color: #d4edda;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #28a745;
-        width: 100%;
     }
     .danger-box {
         background-color: #f8d7da;
         padding: 1rem;
         border-radius: 0.5rem;
         border-left: 4px solid #dc3545;
-        width: 100%;
     }
 
-    /* FORCE columns to use full width */
+    /* Fix column layout - let columns share space properly */
     div[data-testid="column"] {
-        width: 100% !important;
-        flex: 1 1 auto !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 0 0.5rem !important;
     }
 
     /* Remove any max-width constraints */
