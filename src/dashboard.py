@@ -961,6 +961,22 @@ def main():
     except:
         pass
 
+    # Contact Information
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 👤 Contact")
+    st.sidebar.markdown("""
+    **Noah Gallagher**
+    *Data Scientist*
+
+    📧 [noahgallagher1@gmail.com](mailto:noahgallagher1@gmail.com)
+
+    🔗 **Links:**
+    - [GitHub Profile](https://github.com/noahgallagher1)
+    - [Project Repository](https://github.com/noahgallagher1/customer-churn-prediction)
+    - [LinkedIn](https://www.linkedin.com/in/noahgallagher/)
+    - [Portfolio](https://noahgallagher1.github.io/MySite/)
+    """)
+
     # Route to page
     if page == "Executive Summary":
         page_executive_summary()
