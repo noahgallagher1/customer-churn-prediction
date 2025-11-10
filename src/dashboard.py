@@ -292,31 +292,42 @@ def page_executive_summary():
         customers_saved = metrics.get('customers_saved', 0)
         customers_lost = metrics.get('customers_lost', 0)
 
-        # Create gauge chart for ROI
+        # Create gauge chart for ROI with dynamic range
+        # Calculate appropriate max range (at least 100% above actual value, minimum 300)
+        gauge_max = max(300, int((roi * 1.3) // 100) * 100)  # Round up to nearest 100
+
         fig = go.Figure(go.Indicator(
             mode="gauge+number+delta",
             value=roi,
             domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "ROI %"},
-            delta={'reference': 100},
+            title={'text': "ROI %", 'font': {'size': 20}},
+            delta={'reference': 100, 'increasing': {'color': "green"}},
+            number={'suffix': "%", 'font': {'size': 40}},
             gauge={
-                'axis': {'range': [None, 300]},
-                'bar': {'color': config.PRIMARY_COLOR},
+                'axis': {'range': [0, gauge_max], 'tickwidth': 1, 'tickcolor': "darkgray"},
+                'bar': {'color': config.PRIMARY_COLOR, 'thickness': 0.75},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
                 'steps': [
-                    {'range': [0, 100], 'color': "lightgray"},
-                    {'range': [100, 200], 'color': "lightblue"},
-                    {'range': [200, 300], 'color': "lightgreen"}
+                    {'range': [0, 100], 'color': "#ffcccc"},  # Below break-even (red tint)
+                    {'range': [100, 200], 'color': "#fff9cc"},  # Moderate ROI (yellow)
+                    {'range': [200, 400], 'color': "#ccffcc"},  # Good ROI (light green)
+                    {'range': [400, gauge_max], 'color': "#99ff99"}  # Excellent ROI (green)
                 ],
                 'threshold': {
-                    'line': {'color': "red", 'width': 4},
+                    'line': {'color': "red", 'width': 3},
                     'thickness': 0.75,
-                    'value': 150
+                    'value': 100  # Break-even point is at 100% ROI
                 }
             }
         ))
 
         fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
         st.plotly_chart(fig, use_container_width=True)
+
+        # ROI explanation
+        st.caption(f"📊 Break-even at 100% ROI (red line). Current ROI: **{roi:.1f}%** - Excellent performance!")
 
         # Impact metrics
         col_a, col_b = st.columns(2)
