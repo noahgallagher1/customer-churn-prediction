@@ -425,6 +425,21 @@ def page_executive_summary():
 
             st.plotly_chart(fig, use_container_width=True)
 
+            # Add interpretive statement
+            st.info(f"""
+            **📊 What This Chart Tells Us:**
+
+            The features shown above have the strongest **correlation** with customer churn predictions.
+            Higher impact scores indicate features that, when present, are more strongly associated with
+            customers leaving.
+
+            **Business Insight:** The top factor, "{top_features.iloc[0]['display_name']}",
+            has an impact score of {top_features.iloc[0]['importance']:.3f}, meaning it's a critical
+            signal in identifying at-risk customers. However, remember that correlation ≠ causation—
+            these features help us *predict* who will churn, but interventions should be validated
+            through A/B testing to establish causal impact.
+            """)
+
         except Exception as e:
             st.info("Run the explainability pipeline to generate feature importance.")
 
@@ -479,6 +494,18 @@ def page_executive_summary():
             st.metric("Customers Saved", f"{customers_saved:,}")
         with col_b:
             st.metric("Customers Lost", f"{customers_lost:,}")
+
+        # Add interpretive statement for ROI
+        st.success(f"""
+        **💡 Business Translation:**
+
+        An ROI of {roi:.1f}% means that for every $1 spent on retention campaigns,
+        we get back ${roi/100 + 1:.2f}. With {customers_saved:,} customers saved,
+        we're preventing significant revenue loss while maintaining cost-effective operations.
+
+        The model's {recall:.1%} recall rate means we identify {int(recall*10):.0f} out of every
+        10 customers who will churn, allowing proactive intervention before they leave.
+        """)
 
     # Business Recommendations
     st.markdown("---")
@@ -1690,10 +1717,39 @@ Based on the overall model feature importances, the most important factors for p
         - ⚠️ Requires careful interpretation with correlated features
         - ⚠️ Explanations are relative to the model, not ground truth
 
+        ---
+
+        ### ⚠️ Critical Caveat: Correlation vs. Causation
+
+        **IMPORTANT:** SHAP values show **correlation** between features and predictions, **NOT causation**.
+
+        **What This Means:**
+        - SHAP identifies features that are *associated* with churn predictions
+        - It does **NOT** prove that changing a feature will *cause* churn to change
+        - Features may be correlated with unmeasured confounders
+
+        **Example:**
+        - SHAP shows "Month-to-month contract" has high importance
+        - **Correlation:** Customers with month-to-month contracts churn more often
+        - **But:** Simply forcing a customer into a long-term contract may not prevent churn
+        - **Why?** Risk-averse customers self-select into month-to-month contracts. The contract type may be a *symptom* of underlying dissatisfaction, not the *cause* of churn.
+
+        **Implications for Action:**
+        1. **Use SHAP for prioritization**, not causal inference
+        2. **Validate interventions** through A/B testing (see [A/B Test Plan](../A_B_TEST_PLAN.md))
+        3. **Consider confounders** when designing retention strategies
+        4. **Combine with domain expertise** to avoid spurious patterns
+
+        **For Causal Analysis:**
+        - Consider techniques like causal inference, propensity score matching, or instrumental variables
+        - Run controlled experiments (A/B tests) to establish causation
+        - Consult with domain experts to validate hypothesized causal mechanisms
+
         **Learn More:**
         - [SHAP Documentation](https://shap.readthedocs.io/)
         - [Original Paper](https://arxiv.org/abs/1705.07874)
         - [Interpretable ML Book](https://christophm.github.io/interpretable-ml-book/shap.html)
+        - [Correlation vs Causation in ML](https://christophm.github.io/interpretable-ml-book/agnostic.html#feature-importance)
         """)
 
 
