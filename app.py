@@ -940,6 +940,70 @@ def page_feature_importance():
         st.warning("⚠️ Model not found. Please train the model first.")
         return
 
+    # Feature name mapping dictionary - converts technical names to business-friendly names
+    feature_name_mapping = {
+        # Contract features
+        'Contract_Month-to-month': 'Contract Type',
+        'Contract_One year': 'Contract Type',
+        'Contract_Two year': 'Contract Type',
+
+        # Internet Service
+        'InternetService_DSL': 'Internet Service Type',
+        'InternetService_Fiber optic': 'Internet Service Type',
+        'InternetService_No': 'Internet Service Type',
+
+        # Payment Method
+        'PaymentMethod_Bank transfer (automatic)': 'Payment Method',
+        'PaymentMethod_Credit card (automatic)': 'Payment Method',
+        'PaymentMethod_Electronic check': 'Payment Method',
+        'PaymentMethod_Mailed check': 'Payment Method',
+
+        # Yes/No service features
+        'OnlineSecurity_Yes': 'Online Security',
+        'OnlineSecurity_No': 'Online Security',
+        'OnlineBackup_Yes': 'Online Backup',
+        'OnlineBackup_No': 'Online Backup',
+        'DeviceProtection_Yes': 'Device Protection',
+        'DeviceProtection_No': 'Device Protection',
+        'TechSupport_Yes': 'Tech Support',
+        'TechSupport_No': 'Tech Support',
+        'StreamingTV_Yes': 'Streaming TV',
+        'StreamingTV_No': 'Streaming TV',
+        'StreamingMovies_Yes': 'Streaming Movies',
+        'StreamingMovies_No': 'Streaming Movies',
+        'MultipleLines_Yes': 'Multiple Lines',
+        'MultipleLines_No': 'Multiple Lines',
+        'PhoneService_Yes': 'Phone Service',
+        'PhoneService_No': 'Phone Service',
+
+        # Binary features
+        'gender_Male': 'Gender',
+        'gender_Female': 'Gender',
+        'SeniorCitizen': 'Senior Citizen',
+        'Partner': 'Has Partner',
+        'Partner_Yes': 'Has Partner',
+        'Partner_No': 'Has Partner',
+        'Dependents': 'Has Dependents',
+        'Dependents_Yes': 'Has Dependents',
+        'Dependents_No': 'Has Dependents',
+        'PaperlessBilling': 'Paperless Billing',
+        'PaperlessBilling_Yes': 'Paperless Billing',
+        'PaperlessBilling_No': 'Paperless Billing',
+        'PhoneService': 'Phone Service',
+
+        # Numerical features
+        'tenure': 'Tenure (months)',
+        'MonthlyCharges': 'Monthly Charges',
+        'TotalCharges': 'Total Charges',
+
+        # Engineered features
+        'charges_per_tenure': 'Charges per Month',
+        'contract_tenure_ratio': 'Contract-Tenure Ratio',
+        'total_services': 'Total Services',
+        'payment_risk_score': 'Payment Risk Score',
+        'has_premium_services': 'Premium Services'
+    }
+
     # Section 1: Global Feature Importance
     st.markdown("## 📊 Global Feature Importance")
     st.markdown("Understanding which features have the biggest impact on churn predictions across all customers.")
@@ -947,11 +1011,27 @@ def page_feature_importance():
     try:
         feature_importance_df = pd.read_csv(config.REPORTS_DIR / 'shap_feature_importance.csv')
 
+        # Map technical names to business names
+        feature_importance_df['display_name'] = feature_importance_df['feature'].map(
+            lambda x: feature_name_mapping.get(x, x)
+        )
+
+        # Group by display name and sum importances (for one-hot encoded features)
+        grouped_importance = feature_importance_df.groupby('display_name').agg({
+            'importance': 'sum'  # Sum SHAP values for grouped features
+        }).reset_index()
+
+        # Sort by importance
+        grouped_importance = grouped_importance.sort_values('importance', ascending=False)
+
+        # Use grouped importance for visualization
+        feature_importance_df = grouped_importance.rename(columns={'display_name': 'feature'})
+
         col1, col2 = st.columns([2, 1])
 
         with col1:
-            # Top 15 features bar chart
-            top_n = st.slider("Number of top features to display", 5, 20, 15)
+            # Top 10 features bar chart with business-friendly names
+            top_n = st.slider("Number of top features to display", 5, 15, 10)
             top_features = feature_importance_df.head(top_n)
 
             fig = go.Figure(go.Bar(
@@ -960,20 +1040,20 @@ def page_feature_importance():
                 orientation='h',
                 marker=dict(
                     color=top_features['importance'],
-                    colorscale='Viridis',
+                    colorscale='Blues',
                     showscale=True,
-                    colorbar=dict(title="Importance")
+                    colorbar=dict(title="Impact Score")
                 ),
-                text=[f"{val:.4f}" for val in top_features['importance']],
+                text=[f"{val:.3f}" for val in top_features['importance']],
                 textposition='outside',
-                hovertemplate='<b>%{y}</b><br>Importance: %{x:.4f}<extra></extra>'
+                hovertemplate='<b>%{y}</b><br>Impact Score: %{x:.3f}<extra></extra>'
             ))
 
             fig.update_layout(
-                title=f"Top {top_n} Most Important Features",
-                xaxis_title="Mean Absolute SHAP Value",
+                title=f"Top {top_n} Most Important Features (Business View)",
+                xaxis_title="Average Impact on Churn Prediction",
                 yaxis_title="",
-                height=max(400, top_n * 25),
+                height=max(400, top_n * 30),
                 template=config.PLOTLY_TEMPLATE,
                 yaxis={'categoryorder': 'total ascending'}
             )
@@ -983,17 +1063,48 @@ def page_feature_importance():
         with col2:
             st.markdown("### 🎯 Key Insights")
 
+            # Get the top feature for context-specific recommendations
+            top_feature = feature_importance_df.iloc[0]['feature']
+            top_importance = feature_importance_df.iloc[0]['importance']
+
             # Display top 5 features
             st.markdown("**Top 5 Churn Drivers:**")
             for idx, row in feature_importance_df.head(5).iterrows():
-                st.markdown(f"{idx+1}. **{row['feature']}** ({row['importance']:.4f})")
+                st.markdown(f"{idx+1}. **{row['feature']}** (impact: {row['importance']:.3f})")
 
             st.markdown("---")
-            st.markdown("**💡 Interpretation:**")
-            st.info(
-                "Higher SHAP values indicate stronger influence on predictions. "
-                "These features are most critical for identifying at-risk customers."
-            )
+            st.markdown("### 💡 Business Context")
+
+            # Provide specific recommendations based on top feature
+            if 'Contract' in top_feature:
+                st.success("""
+                **Contract Type** is the #1 churn driver.
+
+                **Action:** Focus on converting month-to-month customers to annual contracts with incentives like discounted rates or added services.
+                """)
+            elif 'Tenure' in top_feature:
+                st.success("""
+                **Tenure** is the #1 churn driver.
+
+                **Action:** New customers (< 6 months) are highest risk. Implement strong onboarding programs and early engagement strategies.
+                """)
+            elif 'Charges' in top_feature or 'Monthly' in top_feature:
+                st.success("""
+                **Pricing** is the #1 churn driver.
+
+                **Action:** Review pricing strategy. Consider loyalty discounts for long-term customers and competitive pricing reviews.
+                """)
+            elif 'Internet' in top_feature:
+                st.success("""
+                **Internet Service Type** is the #1 churn driver.
+
+                **Action:** Fiber optic customers may have different expectations. Ensure service quality matches premium pricing.
+                """)
+            else:
+                st.info(
+                    "Higher impact scores indicate stronger influence on churn predictions. "
+                    "These features are most critical for identifying at-risk customers."
+                )
 
     except Exception as e:
         st.warning("⚠️ SHAP feature importance not available. Using model feature importances.")
@@ -1033,7 +1144,7 @@ def page_feature_importance():
     # Section 6: Interactive Feature Explorer
     st.markdown("---")
     st.markdown("## 🔬 Interactive Feature Explorer")
-    st.markdown("Explore how individual features relate to customer churn.")
+    st.markdown("Explore how individual features relate to customer churn with business-friendly names and better categorization.")
 
     test_data = load_test_data()
     if test_data is not None:
@@ -1044,20 +1155,40 @@ def page_feature_importance():
         analysis_df = X_test.copy()
         analysis_df['Churn'] = y_test
 
-        # Feature selector
-        selected_feature = st.selectbox(
-            "Select a feature to explore:",
-            options=sorted(X_test.columns.tolist())
+        # Categorize features into numerical and categorical
+        numerical_features = []
+        categorical_features = []
+
+        for col in X_test.columns:
+            # Check if it's truly numerical (not binary/one-hot encoded)
+            unique_vals = analysis_df[col].nunique()
+            if pd.api.types.is_numeric_dtype(analysis_df[col]) and unique_vals > 10:
+                numerical_features.append(col)
+            else:
+                categorical_features.append(col)
+
+        # Feature type selector
+        feature_type = st.radio(
+            "Select feature type to explore:",
+            ["Numerical Features", "Categorical Features"],
+            horizontal=True
         )
 
-        if selected_feature:
-            col1, col2 = st.columns([2, 1])
+        if feature_type == "Numerical Features":
+            if len(numerical_features) > 0:
+                # Map to business names for display
+                feature_display_names = {feat: feature_name_mapping.get(feat, feat) for feat in numerical_features}
+                display_to_actual = {v: k for k, v in feature_display_names.items()}
 
-            with col1:
-                # Determine if feature is numerical or categorical
-                is_numerical = pd.api.types.is_numeric_dtype(analysis_df[selected_feature])
+                selected_display = st.selectbox(
+                    "Select a numerical feature:",
+                    options=sorted(feature_display_names.values())
+                )
+                selected_feature = display_to_actual[selected_display]
 
-                if is_numerical:
+                col1, col2 = st.columns([2, 1])
+
+                with col1:
                     # Histogram with churn overlay
                     fig = go.Figure()
 
@@ -1065,8 +1196,8 @@ def page_feature_importance():
                     fig.add_trace(go.Histogram(
                         x=analysis_df[analysis_df['Churn'] == 0][selected_feature],
                         name='Not Churned',
-                        marker_color='steelblue',
-                        opacity=0.7,
+                        marker_color='#4A90E2',
+                        opacity=0.75,
                         nbinsx=30
                     ))
 
@@ -1074,111 +1205,156 @@ def page_feature_importance():
                     fig.add_trace(go.Histogram(
                         x=analysis_df[analysis_df['Churn'] == 1][selected_feature],
                         name='Churned',
-                        marker_color='indianred',
-                        opacity=0.7,
+                        marker_color='#E74C3C',
+                        opacity=0.75,
                         nbinsx=30
                     ))
 
                     fig.update_layout(
-                        title=f"Distribution of {selected_feature} by Churn Status",
-                        xaxis_title=selected_feature,
-                        yaxis_title="Count",
+                        title=f"Distribution of {selected_display} by Churn Status",
+                        xaxis_title=selected_display,
+                        yaxis_title="Number of Customers",
                         barmode='overlay',
                         height=400,
                         template=config.PLOTLY_TEMPLATE,
-                        hovermode='x unified'
+                        hovermode='x unified',
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
 
                     st.plotly_chart(fig, use_container_width=True)
 
-                else:
-                    # Bar chart for categorical
-                    churn_counts = analysis_df.groupby([selected_feature, 'Churn']).size().unstack(fill_value=0)
+                with col2:
+                    st.markdown("### 📈 Statistics")
 
-                    fig = go.Figure()
-
-                    fig.add_trace(go.Bar(
-                        x=churn_counts.index,
-                        y=churn_counts[0],
-                        name='Not Churned',
-                        marker_color='steelblue'
-                    ))
-
-                    fig.add_trace(go.Bar(
-                        x=churn_counts.index,
-                        y=churn_counts[1],
-                        name='Churned',
-                        marker_color='indianred'
-                    ))
-
-                    fig.update_layout(
-                        title=f"Distribution of {selected_feature} by Churn Status",
-                        xaxis_title=selected_feature,
-                        yaxis_title="Count",
-                        barmode='group',
-                        height=400,
-                        template=config.PLOTLY_TEMPLATE
-                    )
-
-                    st.plotly_chart(fig, use_container_width=True)
-
-            with col2:
-                st.markdown("### 📈 Statistics")
-
-                if is_numerical:
-                    # Stats for numerical
                     not_churned_stats = analysis_df[analysis_df['Churn'] == 0][selected_feature]
                     churned_stats = analysis_df[analysis_df['Churn'] == 1][selected_feature]
 
+                    # Calculate stats
+                    mean_diff = churned_stats.mean() - not_churned_stats.mean()
+                    median_diff = churned_stats.median() - not_churned_stats.median()
+
                     stats_df = pd.DataFrame({
-                        'Metric': ['Mean', 'Median', 'Std Dev', 'Min', 'Max'],
+                        'Metric': ['Mean', 'Median', 'Std Dev'],
                         'Not Churned': [
                             f"{not_churned_stats.mean():.2f}",
                             f"{not_churned_stats.median():.2f}",
-                            f"{not_churned_stats.std():.2f}",
-                            f"{not_churned_stats.min():.2f}",
-                            f"{not_churned_stats.max():.2f}"
+                            f"{not_churned_stats.std():.2f}"
                         ],
                         'Churned': [
                             f"{churned_stats.mean():.2f}",
                             f"{churned_stats.median():.2f}",
-                            f"{churned_stats.std():.2f}",
-                            f"{churned_stats.min():.2f}",
-                            f"{churned_stats.max():.2f}"
+                            f"{churned_stats.std():.2f}"
                         ]
                     })
 
                     st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
-                else:
-                    # Percentage breakdown for categorical
-                    total_not_churned = (analysis_df['Churn'] == 0).sum()
-                    total_churned = (analysis_df['Churn'] == 1).sum()
+                    # Interpretation
+                    st.markdown("---")
+                    st.markdown("**💡 Insight:**")
+                    if abs(mean_diff) > 0.1 * not_churned_stats.mean():
+                        direction = "higher" if mean_diff > 0 else "lower"
+                        st.warning(f"Churned customers have {direction} {selected_display} on average (diff: {abs(mean_diff):.2f})")
+                    else:
+                        st.info(f"Similar distribution between churned and retained customers")
 
+            else:
+                st.info("No numerical features available.")
+
+        else:  # Categorical Features
+            if len(categorical_features) > 0:
+                # Map to business names for display
+                feature_display_names = {feat: feature_name_mapping.get(feat, feat) for feat in categorical_features}
+                display_to_actual = {v: k for k, v in feature_display_names.items()}
+
+                selected_display = st.selectbox(
+                    "Select a categorical feature:",
+                    options=sorted(feature_display_names.values())
+                )
+                selected_feature = display_to_actual[selected_display]
+
+                col1, col2 = st.columns([2, 1])
+
+                with col1:
+                    # Calculate churn rates by category
                     category_stats = []
-                    for category in analysis_df[selected_feature].unique():
-                        not_churned_count = ((analysis_df[selected_feature] == category) & (analysis_df['Churn'] == 0)).sum()
-                        churned_count = ((analysis_df[selected_feature] == category) & (analysis_df['Churn'] == 1)).sum()
+                    for category in sorted(analysis_df[selected_feature].unique()):
+                        mask = analysis_df[selected_feature] == category
+                        total = mask.sum()
+                        churned = (mask & (analysis_df['Churn'] == 1)).sum()
+                        not_churned = total - churned
+                        churn_rate = (churned / total * 100) if total > 0 else 0
 
                         category_stats.append({
-                            'Category': category,
-                            'Not Churned %': f"{(not_churned_count / total_not_churned * 100):.1f}%",
-                            'Churned %': f"{(churned_count / total_churned * 100):.1f}%"
+                            'category': category,
+                            'not_churned': not_churned,
+                            'churned': churned,
+                            'churn_rate': churn_rate,
+                            'total': total
                         })
 
                     stats_df = pd.DataFrame(category_stats)
-                    st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
-                # SHAP impact if available
-                try:
-                    feature_importance_df = pd.read_csv(config.REPORTS_DIR / 'shap_feature_importance.csv')
-                    shap_value = feature_importance_df[feature_importance_df['feature'] == selected_feature]['importance'].values
+                    # Stacked bar chart with churn rate
+                    fig = go.Figure()
 
-                    if len(shap_value) > 0:
-                        st.markdown("---")
-                        st.metric("Avg SHAP Impact", f"{shap_value[0]:.4f}")
-                except:
-                    pass
+                    fig.add_trace(go.Bar(
+                        x=stats_df['category'],
+                        y=stats_df['not_churned'],
+                        name='Not Churned',
+                        marker_color='#4A90E2',
+                        text=stats_df['not_churned'],
+                        textposition='inside'
+                    ))
+
+                    fig.add_trace(go.Bar(
+                        x=stats_df['category'],
+                        y=stats_df['churned'],
+                        name='Churned',
+                        marker_color='#E74C3C',
+                        text=stats_df['churned'],
+                        textposition='inside'
+                    ))
+
+                    fig.update_layout(
+                        title=f"{selected_display} - Customer Distribution by Churn Status",
+                        xaxis_title="Category",
+                        yaxis_title="Number of Customers",
+                        barmode='stack',
+                        height=400,
+                        template=config.PLOTLY_TEMPLATE,
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with col2:
+                    st.markdown("### 📊 Churn Rates")
+
+                    # Show churn rate by category
+                    churn_rate_df = pd.DataFrame({
+                        'Category': stats_df['category'],
+                        'Total': stats_df['total'],
+                        'Churn Rate': [f"{rate:.1f}%" for rate in stats_df['churn_rate']]
+                    })
+
+                    st.dataframe(churn_rate_df, use_container_width=True, hide_index=True)
+
+                    # Find highest risk category
+                    highest_risk_idx = stats_df['churn_rate'].idxmax()
+                    highest_risk_cat = stats_df.iloc[highest_risk_idx]['category']
+                    highest_risk_rate = stats_df.iloc[highest_risk_idx]['churn_rate']
+
+                    st.markdown("---")
+                    st.markdown("**⚠️ Highest Risk:**")
+                    st.error(f"**{highest_risk_cat}**: {highest_risk_rate:.1f}% churn rate")
+
+                    # Overall churn rate for comparison
+                    overall_churn_rate = (analysis_df['Churn'].sum() / len(analysis_df)) * 100
+                    st.metric("Overall Churn Rate", f"{overall_churn_rate:.1f}%")
+
+            else:
+                st.info("No categorical features available.")
 
     # Section 7: Individual Prediction Explanation
     st.markdown("---")
@@ -1269,6 +1445,11 @@ def page_feature_importance():
                     'shap_value': customer_shap[0]
                 }).sort_values('shap_value', key=abs, ascending=False)
 
+                # Map to business-friendly names
+                feature_contributions['display_name'] = feature_contributions['feature'].map(
+                    lambda x: feature_name_mapping.get(x, x)
+                )
+
                 avg_churn_rate = y_test.mean() * 100
 
                 explanation = f"""
@@ -1286,20 +1467,22 @@ average churn rate of {avg_churn_rate:.1f}%.
                 if len(positive_contributors) > 0:
                     explanation += "\n**Increasing Churn Risk:**\n"
                     for _, row in positive_contributors.iterrows():
-                        explanation += f"- **{row['feature']}** (value: {row['value']:.2f if isinstance(row['value'], (int, float)) else row['value']}) contributes +{row['shap_value']:.3f} to churn risk\n"
+                        val_str = f"{row['value']:.2f}" if isinstance(row['value'], (int, float)) else str(row['value'])
+                        explanation += f"- **{row['display_name']}** (value: {val_str}) contributes +{row['shap_value']:.3f} to churn risk\n"
 
                 # Top 3 negative contributors
                 negative_contributors = feature_contributions[feature_contributions['shap_value'] < 0].head(3)
                 if len(negative_contributors) > 0:
                     explanation += "\n**Decreasing Churn Risk:**\n"
                     for _, row in negative_contributors.iterrows():
-                        explanation += f"- **{row['feature']}** (value: {row['value']:.2f if isinstance(row['value'], (int, float)) else row['value']}) reduces churn risk by {abs(row['shap_value']):.3f}\n"
+                        val_str = f"{row['value']:.2f}" if isinstance(row['value'], (int, float)) else str(row['value'])
+                        explanation += f"- **{row['display_name']}** (value: {val_str}) reduces churn risk by {abs(row['shap_value']):.3f}\n"
 
                 # Recommendation
                 explanation += "\n**Recommended Action:**\n"
                 if churn_probability >= 0.7:
-                    top_feature = positive_contributors.iloc[0]['feature']
-                    explanation += f"🚨 **URGENT**: This customer is high risk. Focus on addressing **{top_feature}** immediately through targeted retention offers."
+                    top_feature_display = positive_contributors.iloc[0]['display_name']
+                    explanation += f"🚨 **URGENT**: This customer is high risk. Focus on addressing **{top_feature_display}** immediately through targeted retention offers."
                 elif churn_probability >= 0.4:
                     explanation += "⚠️ **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
                 else:
