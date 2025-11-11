@@ -1582,19 +1582,36 @@ average churn rate of {avg_churn_rate:.1f}%.
 
 Based on the overall model feature importances, the most important factors for predicting churn are:
 """
-                # Get top 5 most important features
+                # Get top features and deduplicate by business name
                 feature_importance_df = pd.DataFrame({
                     'feature': customer_data.columns,
                     'importance': model.feature_importances_
-                }).sort_values('importance', ascending=False).head(5)
+                }).sort_values('importance', ascending=False)
 
-                for idx, row in feature_importance_df.iterrows():
-                    display_name = feature_name_mapping.get(row['feature'], row['feature'])
-                    customer_value = customer_data.iloc[0][row['feature']]
+                # Map to business names and aggregate duplicates
+                feature_importance_df['display_name'] = feature_importance_df['feature'].map(
+                    lambda x: feature_name_mapping.get(x, x)
+                )
+
+                # Group by display name and sum importances, keep the feature with the highest individual importance
+                grouped_features = feature_importance_df.groupby('display_name').agg({
+                    'feature': 'first',  # Keep first occurrence
+                    'importance': 'sum'  # Sum importances for grouped features
+                }).reset_index()
+
+                # Sort by summed importance and get top 5
+                top_features = grouped_features.sort_values('importance', ascending=False).head(5)
+
+                counter = 1
+                for _, row in top_features.iterrows():
+                    display_name = row['display_name']
+                    feature_name = row['feature']
+                    customer_value = customer_data.iloc[0][feature_name]
                     if isinstance(customer_value, (int, float)):
-                        explanation += f"\n{idx+1}. **{display_name}** (customer value: {customer_value:.2f})"
+                        explanation += f"\n{counter}. **{display_name}** (customer value: {customer_value:.2f})"
                     else:
-                        explanation += f"\n{idx+1}. **{display_name}** (customer value: {customer_value})"
+                        explanation += f"\n{counter}. **{display_name}** (customer value: {customer_value})"
+                    counter += 1
 
                 explanation += "\n\n**Recommended Action:**\n"
                 if churn_probability >= 0.7:
