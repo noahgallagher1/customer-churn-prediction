@@ -440,6 +440,15 @@ def explainability_pipeline(
                 f.write(insights)
             logger.info(f"Saved business insights to {insights_file}")
 
+            # Create a minimal shap_objects file so dashboard doesn't crash
+            # Set shap_data to None so dashboard knows SHAP is not available
+            joblib.dump({
+                'shap_values': None,
+                'X_sample': None,
+                'explainer': None
+            }, config.MODELS_DIR / 'shap_objects.joblib')
+            logger.info("Created minimal shap_objects.joblib (SHAP not available)")
+
             logger.info("="*60)
             logger.info("✓ Explainability Pipeline Complete (Feature Importances Only)")
             logger.info("="*60)
