@@ -2697,13 +2697,6 @@ def main():
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Dashboard"
 
-    # Check for navigation clicks from query params
-    nav_page = st.query_params.get("nav_page")
-    if nav_page:
-        st.session_state.current_page = nav_page
-        st.query_params.clear()
-        st.rerun()
-
     # Professional Navigation Bar with Active State Highlighting
     current_page = st.session_state.current_page
 
@@ -2719,8 +2712,8 @@ def main():
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
-    /* Base navigation button styling */
-    .stButton button {
+    /* Base navigation button styling - target buttons in nav container */
+    .nav-container .stButton button {
         height: 3.5rem !important;
         width: 100% !important;
         font-size: 0.88rem !important;
@@ -2735,8 +2728,8 @@ def main():
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
     }
 
-    /* Hover state for all buttons */
-    .stButton button:hover {
+    /* Hover state for navigation buttons */
+    .nav-container .stButton button:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         border-color: #667eea !important;
@@ -2744,14 +2737,14 @@ def main():
         color: #667eea !important;
     }
 
-    /* Active state - applied via data attribute */
-    .stButton button:active {
+    /* Active/clicked state for navigation buttons */
+    .nav-container .stButton button:active {
         transform: translateY(0) !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
     }
 
     /* Make all navigation buttons the same size */
-    div[data-testid="column"] button {
+    .nav-container div[data-testid="column"] button {
         min-height: 3.5rem !important;
         height: 3.5rem !important;
     }
@@ -2829,33 +2822,23 @@ def main():
                 """
                 st.markdown(button_html, unsafe_allow_html=True)
             else:
-                # Inactive button - HTML button that triggers form submission
-                button_html = f"""
-                <form action="" method="get">
-                    <button type="submit" name="nav_page" value="{page_name}" style="
-                        height: 3.5rem;
-                        width: 100%;
-                        font-size: 0.88rem;
-                        font-weight: 600;
-                        border-radius: 0.75rem;
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        white-space: nowrap;
-                        padding: 0.75rem 0.8rem;
-                        border: 2px solid transparent;
-                        background: white;
-                        color: #495057;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'; this.style.borderColor='#667eea'; this.style.background='#f8f9ff'; this.style.color='#667eea';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; this.style.borderColor='transparent'; this.style.background='white'; this.style.color='#495057';">
-                        <i class='{icon}' style='margin-right: 0.4rem; font-size: 1.05em;'></i>
-                        {label}
-                    </button>
-                </form>
-                """
-                st.markdown(button_html, unsafe_allow_html=True)
+                # Inactive button - Use Streamlit button for instant navigation without page refresh
+                button_key = f"nav_{page_name.replace(' ', '_')}"
+                # Map Font Awesome icon to closest emoji equivalent for Streamlit
+                icon_map = {
+                    "fas fa-home": "🏠",
+                    "fas fa-chart-area": "📊",
+                    "fas fa-user-shield": "🛡️",
+                    "fas fa-microscope": "🔬",
+                    "fas fa-flask": "🧪",
+                    "fas fa-database": "💾"
+                }
+                emoji = icon_map.get(icon, "▶️")
+                button_label = f"{emoji} {label}"
+
+                if st.button(button_label, key=button_key, use_container_width=True, type="secondary"):
+                    st.session_state.current_page = page_name
+                    st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
