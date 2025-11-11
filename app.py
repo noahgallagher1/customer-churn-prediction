@@ -37,7 +37,7 @@ st.markdown("""
 <style>
     /* FORCE full width - override ALL Streamlit defaults with !important */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0rem !important;
         padding-bottom: 0rem !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
@@ -51,6 +51,7 @@ st.markdown("""
         width: 100% !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
+        padding-top: 0rem !important;
     }
 
     /* Override app view container */
@@ -58,6 +59,7 @@ st.markdown("""
         max-width: 100% !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
+        padding-top: 0rem !important;
     }
 
     /* Remove excessive margins but preserve layout */
@@ -485,11 +487,11 @@ def page_executive_summary():
                 margin=dict(l=10, r=40, t=60, b=50)
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             # Add interpretive statement with custom styling for alignment
             st.markdown(f"""
-            <div class="insight-box" style="margin-top: 1rem;">
+            <div class="insight-box" style="margin-top: 1rem; min-height: 200px;">
             <strong>📊 What This Chart Tells Us:</strong><br><br>
 
             The features shown above have the strongest <strong>correlation</strong> with customer churn predictions.
@@ -547,7 +549,7 @@ def page_executive_summary():
         ))
 
         fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         # ROI explanation
         st.caption(f"📊 Break-even at 100% ROI (red line). Current ROI: **{roi:.1f}%** - Excellent performance!")
@@ -608,11 +610,18 @@ def page_executive_summary():
         roi_return = roi / 100.0 + 1.0  # Calculate return per dollar
 
         st.markdown(f"""
-        <div class="insight-box" style="margin-top: 1rem;">
+        <div class="insight-box" style="margin-top: 1rem; min-height: 200px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
         <strong>💡 Business Translation:</strong><br><br>
         An ROI of {roi:.1f}% means that for every <strong>$1 spent</strong> on retention campaigns, we get back <strong>${roi_return:.2f}</strong>. With {customers_saved:,} customers saved, we're preventing significant revenue loss while maintaining cost-effective operations.
         <br><br>
         The model's <strong>{recall:.1f}%</strong> recall rate means we identify <strong>{customers_identified} out of every 10</strong> customers who will churn, allowing proactive intervention before they leave.
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(23, 162, 184, 0.3);">
+        <small style="color: #5a6c7d; font-style: italic;">
+        💡 <strong>Key Takeaway:</strong> The model delivers exceptional value by identifying high-risk customers early, enabling targeted interventions that cost far less than acquiring new customers.
+        </small>
+        </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -768,7 +777,7 @@ def page_model_performance():
 
         st.dataframe(
             metrics_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "Metric": st.column_config.TextColumn("Metric", width="medium"),
@@ -826,7 +835,7 @@ def page_model_performance():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     with col_metrics:
         # Business metrics
@@ -853,7 +862,7 @@ def page_model_performance():
             ]
         })
 
-        st.dataframe(business_metrics, use_container_width=True, hide_index=True)
+        st.dataframe(business_metrics, width="stretch", hide_index=True)
 
     # ROC and PR Curves
     st.markdown("---")
@@ -891,7 +900,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     with col_pr:
         st.markdown("#### Precision-Recall Curve")
@@ -917,7 +926,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # Model Comparison
     if all_results is not None:
@@ -958,11 +967,11 @@ def page_model_performance():
             template=config.PLOTLY_TEMPLATE
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         # Show table
         st.dataframe(comparison_df.style.highlight_max(axis=0, props='background-color: lightgreen'),
-                    use_container_width=True, hide_index=True)
+                    width="stretch", hide_index=True)
 
 
 def page_customer_risk_scoring():
@@ -1099,7 +1108,7 @@ def page_customer_risk_scoring():
     ))
 
     fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # SHAP Explanation
     if shap_data is not None and shap_data.get('explainer') is not None:
@@ -1131,7 +1140,7 @@ def page_customer_risk_scoring():
             )
 
             shap.plots.waterfall(shap_exp, show=False)
-            st.pyplot(fig, use_container_width=True)
+            st.pyplot(fig, width="stretch")
             plt.close()
 
         except Exception as e:
@@ -1320,7 +1329,7 @@ def page_feature_importance():
                 yaxis={'categoryorder': 'total ascending'}
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with col2:
             st.markdown("### 🎯 Key Insights")
@@ -1401,7 +1410,7 @@ def page_feature_importance():
                     yaxis={'categoryorder': 'total ascending'}
                 )
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # Section 6: Interactive Feature Explorer
     st.markdown("---")
@@ -1483,7 +1492,7 @@ def page_feature_importance():
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
                 with col2:
                     st.markdown("### 📈 Statistics")
@@ -1509,7 +1518,7 @@ def page_feature_importance():
                         ]
                     })
 
-                    st.dataframe(stats_df, use_container_width=True, hide_index=True)
+                    st.dataframe(stats_df, width="stretch", hide_index=True)
 
                     # Interpretation
                     st.markdown("---")
@@ -1594,7 +1603,7 @@ def page_feature_importance():
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
                 with col2:
                     st.markdown("### 📊 Churn Rates")
@@ -1606,7 +1615,7 @@ def page_feature_importance():
                         'Churn Rate': [f"{rate:.1f}%" for rate in stats_df['churn_rate']]
                     })
 
-                    st.dataframe(churn_rate_df, use_container_width=True, hide_index=True)
+                    st.dataframe(churn_rate_df, width="stretch", hide_index=True)
 
                     # Find highest risk category
                     highest_risk_idx = stats_df['churn_rate'].idxmax()
@@ -1688,7 +1697,7 @@ def page_feature_importance():
                 )
 
                 shap.plots.waterfall(shap_exp, show=False)
-                st.pyplot(fig, use_container_width=True)
+                st.pyplot(fig, width="stretch")
                 plt.close()
 
             except Exception as e:
@@ -1858,7 +1867,7 @@ Based on the overall model feature importances, the most important factors for p
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             st.info("**Interpretation:** Red indicates positive correlation, blue indicates negative correlation. Values range from -1 to +1.")
 
@@ -2008,7 +2017,7 @@ def page_ab_test_simulator():
         template=config.PLOTLY_TEMPLATE
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # Financial breakdown
     st.markdown("### 💵 Financial Breakdown")
@@ -2021,7 +2030,7 @@ def page_ab_test_simulator():
             'Item': ['Campaign Execution', 'Target Customers', 'Cost per Customer'],
             'Value': [f"${total_campaign_cost:,}", f"{customers_targeted:,}", f"${campaign_cost_per_customer}"]
         })
-        st.dataframe(costs_df, use_container_width=True, hide_index=True)
+        st.dataframe(costs_df, width="stretch", hide_index=True)
 
     with col2:
         st.markdown("**Benefits:**")
@@ -2029,7 +2038,7 @@ def page_ab_test_simulator():
             'Item': ['Customers Saved', 'Value per Customer', 'Total Revenue Saved'],
             'Value': [f"{customers_saved:,}", f"${avg_customer_value:,}", f"${revenue_saved:,}"]
         })
-        st.dataframe(benefits_df, use_container_width=True, hide_index=True)
+        st.dataframe(benefits_df, width="stretch", hide_index=True)
 
     # Section 2: A/B Test Design
     st.markdown("---")
@@ -2148,7 +2157,7 @@ def page_ab_test_simulator():
         template=config.PLOTLY_TEMPLATE
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # Interpretation guide
     with st.expander("📚 How to Interpret A/B Test Results"):
@@ -2315,7 +2324,7 @@ def page_about_data():
 
     st.dataframe(
         feature_dict_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Feature Name": st.column_config.TextColumn("Feature Name", width="medium"),
@@ -2348,7 +2357,7 @@ def page_about_data():
                 }).query('`Missing Count` > 0')
 
                 if len(missing_df) > 0:
-                    st.dataframe(missing_df, use_container_width=True, hide_index=True)
+                    st.dataframe(missing_df, width="stretch", hide_index=True)
                 else:
                     st.success("✅ No missing values!")
 
@@ -2380,7 +2389,7 @@ def page_about_data():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     # Section 4: Key Statistics
     st.markdown("---")
@@ -2417,7 +2426,7 @@ def page_about_data():
                 stats.append(('Has Dependents', f'{dep_pct:.1f}%'))
 
             stats_df = pd.DataFrame(stats, columns=['Metric', 'Value'])
-            st.dataframe(stats_df, use_container_width=True, hide_index=True)
+            st.dataframe(stats_df, width="stretch", hide_index=True)
 
         with col2:
             st.markdown("### 📊 Service Usage")
@@ -2446,7 +2455,7 @@ def page_about_data():
                 usage_stats.append(('Internet Service Adoption', f'{internet_pct:.1f}%'))
 
             usage_df = pd.DataFrame(usage_stats, columns=['Metric', 'Value'])
-            st.dataframe(usage_df, use_container_width=True, hide_index=True)
+            st.dataframe(usage_df, width="stretch", hide_index=True)
 
     # Section 5: Class Balance Visualization
     st.markdown("---")
@@ -2473,7 +2482,7 @@ def page_about_data():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with col2:
             churn_rate = full_data['Churn'].mean() * 100
@@ -2494,7 +2503,7 @@ def page_about_data():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         if churn_rate < 40:
             st.info(f"ℹ️ The dataset shows a {churn_rate:.1f}% churn rate, which is typical for telecom industry benchmarks (15-35%).")
@@ -2621,50 +2630,25 @@ def main():
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Dashboard"
 
-    # Top Navigation Bar
+    # Top Navigation Bar - Add CSS for better button styling
     st.markdown("""
     <style>
-    .top-nav {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 0.8rem 2rem;
-        margin: -4rem -4rem 2rem -4rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 0;
-        z-index: 999;
+    /* Navigation bar container styling */
+    .stButton button {
+        height: 3rem !important;
+        width: 100% !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        border-radius: 0.5rem !important;
+        transition: all 0.3s ease !important;
+        white-space: nowrap !important;
+        padding: 0.6rem 0.8rem !important;
     }
-    .nav-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-    .nav-button {
-        background: rgba(255,255,255,0.15);
-        color: white;
-        padding: 0.6rem 1.2rem;
-        border-radius: 0.5rem;
-        text-decoration: none;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        border: 1px solid rgba(255,255,255,0.2);
-        cursor: pointer;
-        white-space: nowrap;
-    }
-    .nav-button:hover {
-        background: rgba(255,255,255,0.25);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .nav-button.active {
-        background: white;
-        color: #667eea;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
+    /* Make all navigation buttons the same size */
+    div[data-testid="column"] button {
+        min-height: 3rem !important;
+        height: 3rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -2673,22 +2657,22 @@ def main():
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
-        if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
+        if st.button("📊 Dashboard", width="stretch", key="nav_dashboard"):
             st.session_state.current_page = "Dashboard"
     with col2:
-        if st.button("📈 Model Performance", use_container_width=True, key="nav_model"):
+        if st.button("📈 Model Performance", width="stretch", key="nav_model"):
             st.session_state.current_page = "Model Performance"
     with col3:
-        if st.button("🎯 Customer Risk", use_container_width=True, key="nav_risk"):
+        if st.button("🎯 Customer Risk", width="stretch", key="nav_risk"):
             st.session_state.current_page = "Customer Risk Scoring"
     with col4:
-        if st.button("🔍 Feature Importance", use_container_width=True, key="nav_features"):
+        if st.button("🔍 Feature Importance", width="stretch", key="nav_features"):
             st.session_state.current_page = "Feature Importance"
     with col5:
-        if st.button("🧪 A/B Testing", use_container_width=True, key="nav_ab"):
+        if st.button("🧪 A/B Testing", width="stretch", key="nav_ab"):
             st.session_state.current_page = "A/B Test Simulator"
     with col6:
-        if st.button("📚 About Data", use_container_width=True, key="nav_data"):
+        if st.button("📚 About Data", width="stretch", key="nav_data"):
             st.session_state.current_page = "About the Data"
 
     st.markdown("---")
