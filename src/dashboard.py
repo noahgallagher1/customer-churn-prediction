@@ -134,30 +134,45 @@ st.markdown("""
         border-left: 4px solid #1f77b4;
     }
 
-    /* Info boxes - adapt to container */
+    /* Info boxes - adapt to container with consistent styling */
     .insight-box {
         background-color: #e8f4f8;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #17a2b8;
+        padding: 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 5px solid #17a2b8;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        line-height: 1.6;
     }
     .warning-box {
         background-color: #fff3cd;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #ffc107;
+        padding: 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 5px solid #ffc107;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        line-height: 1.6;
     }
     .success-box {
         background-color: #d4edda;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #28a745;
+        padding: 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 5px solid #28a745;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        line-height: 1.6;
     }
     .danger-box {
         background-color: #f8d7da;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #dc3545;
+        padding: 1.2rem;
+        border-radius: 0.75rem;
+        border-left: 5px solid #dc3545;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        line-height: 1.6;
+    }
+
+    /* Streamlit info/success message override for consistency */
+    .stAlert {
+        padding: 1.2rem !important;
+        border-radius: 0.75rem !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -339,16 +354,20 @@ def page_executive_summary():
 
             # Apply the same feature name mapping as in Feature Importance tab
             feature_name_mapping = {
+                # Contract features
                 'Contract_Month-to-month': 'Contract Type',
                 'Contract_One year': 'Contract Type',
                 'Contract_Two year': 'Contract Type',
+                # Internet Service
                 'InternetService_DSL': 'Internet Service Type',
                 'InternetService_Fiber optic': 'Internet Service Type',
                 'InternetService_No': 'Internet Service Type',
+                # Payment Method
                 'PaymentMethod_Bank transfer (automatic)': 'Payment Method',
                 'PaymentMethod_Credit card (automatic)': 'Payment Method',
                 'PaymentMethod_Electronic check': 'Payment Method',
                 'PaymentMethod_Mailed check': 'Payment Method',
+                # Service features
                 'OnlineSecurity_Yes': 'Online Security',
                 'OnlineSecurity_No': 'Online Security',
                 'OnlineBackup_Yes': 'Online Backup',
@@ -365,6 +384,7 @@ def page_executive_summary():
                 'MultipleLines_No': 'Multiple Lines',
                 'PhoneService_Yes': 'Phone Service',
                 'PhoneService_No': 'Phone Service',
+                # Demographics
                 'gender_Male': 'Gender',
                 'gender_Female': 'Gender',
                 'SeniorCitizen': 'Senior Citizen',
@@ -378,14 +398,27 @@ def page_executive_summary():
                 'PaperlessBilling_Yes': 'Paperless Billing',
                 'PaperlessBilling_No': 'Paperless Billing',
                 'PhoneService': 'Phone Service',
+                # Numerical features
                 'tenure': 'Tenure (months)',
                 'MonthlyCharges': 'Monthly Charges',
                 'TotalCharges': 'Total Charges',
-                'charges_per_tenure': 'Charges per Month',
+                # Engineered features
+                'charges_per_tenure': 'Avg. Charges per Month',
                 'contract_tenure_ratio': 'Contract-Tenure Ratio',
-                'total_services': 'Total Services',
+                'total_services': 'Total Services Count',
                 'payment_risk_score': 'Payment Risk Score',
-                'has_premium_services': 'Premium Services'
+                'has_premium_services': 'Premium Services',
+                # Categorical binned features
+                'monthly_charges_cat_low': 'Monthly Charges (Low)',
+                'monthly_charges_cat_medium': 'Monthly Charges (Medium)',
+                'monthly_charges_cat_high': 'Monthly Charges (High)',
+                'tenure_group_0-1 year': 'Tenure (0-1 year)',
+                'tenure_group_1-2 years': 'Tenure (1-2 years)',
+                'tenure_group_2-3 years': 'Tenure (2-3 years)',
+                'tenure_group_3-4 years': 'Tenure (3-4 years)',
+                'tenure_group_4-5 years': 'Tenure (4-5 years)',
+                'tenure_group_5-6 years': 'Tenure (5-6 years)',
+                'tenure_group': 'Tenure Group'
             }
 
             # Map technical names to business names
@@ -406,21 +439,40 @@ def page_executive_summary():
                 x=top_features['importance'],
                 y=top_features['display_name'],
                 orientation='h',
-                marker=dict(color=top_features['importance'],
-                          colorscale='Reds',
-                          showscale=False),
+                marker=dict(
+                    color=top_features['importance'],
+                    colorscale='RdYlBu_r',  # Red-Yellow-Blue reversed (red = high importance)
+                    showscale=False,
+                    line=dict(color='rgba(255,255,255,0.3)', width=1)
+                ),
                 text=[f"{val:.3f}" for val in top_features['importance']],
-                textposition='outside'
+                textposition='outside',
+                textfont=dict(size=12, color='#2c3e50', family='Arial, sans-serif'),
+                hovertemplate='<b>%{y}</b><br>Impact Score: %{x:.4f}<extra></extra>'
             ))
 
             fig.update_layout(
-                title="Top 10 Churn Predictors (Business View)",
+                title={
+                    'text': "Top 10 Churn Predictors",
+                    'font': {'size': 16, 'color': '#2c3e50', 'family': 'Arial, sans-serif'},
+                    'x': 0.5,
+                    'xanchor': 'center'
+                },
                 xaxis_title="Impact Score",
                 yaxis_title="",
-                height=500,
-                template=config.PLOTLY_TEMPLATE,
-                yaxis={'categoryorder': 'total ascending'},
-                xaxis={'range': [0, top_features['importance'].max() * 1.1]}
+                height=550,
+                template='plotly_white',
+                yaxis={
+                    'categoryorder': 'total ascending',
+                    'tickfont': {'size': 12, 'color': '#2c3e50', 'family': 'Arial, sans-serif'}
+                },
+                xaxis={
+                    'range': [0, top_features['importance'].max() * 1.15],
+                    'tickfont': {'size': 11, 'color': '#7f8c8d'}
+                },
+                plot_bgcolor='rgba(248,249,250,0.8)',
+                paper_bgcolor='white',
+                margin=dict(l=10, r=40, t=60, b=50)
             )
 
             st.plotly_chart(fig, use_container_width=True)
@@ -488,67 +540,173 @@ def page_executive_summary():
         # ROI explanation
         st.caption(f"📊 Break-even at 100% ROI (red line). Current ROI: **{roi:.1f}%** - Excellent performance!")
 
-        # Impact metrics
+        # Impact metrics with styled tiles
+        st.markdown("""
+        <style>
+        .impact-tile {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.2rem;
+            border-radius: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 0.5rem 0;
+        }
+        .impact-tile-green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .impact-tile-red {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        }
+        .impact-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: white;
+            margin: 0.3rem 0;
+        }
+        .impact-label {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.95);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
         col_a, col_b = st.columns(2)
         with col_a:
-            st.metric("Customers Saved", f"{customers_saved:,}")
+            st.markdown(f"""
+            <div class="impact-tile impact-tile-green">
+                <div class="impact-label">✓ Customers Saved</div>
+                <div class="impact-value">{customers_saved:,}</div>
+            </div>
+            """, unsafe_allow_html=True)
         with col_b:
-            st.metric("Customers Lost", f"{customers_lost:,}")
+            st.markdown(f"""
+            <div class="impact-tile impact-tile-red">
+                <div class="impact-label">✗ Customers Lost</div>
+                <div class="impact-value">{customers_lost:,}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         # Add interpretive statement for ROI
-        st.success(f"""
-        **💡 Business Translation:**
+        st.markdown(f"""
+        <div class="insight-box" style="margin-top: 1rem;">
+        <strong>💡 Business Translation:</strong><br><br>
 
         An ROI of {roi:.1f}% means that for every $1 spent on retention campaigns,
         we get back ${roi/100 + 1:.2f}. With {customers_saved:,} customers saved,
         we're preventing significant revenue loss while maintaining cost-effective operations.
-
+        <br><br>
         The model's {recall:.1%} recall rate means we identify {int(recall*10):.0f} out of every
         10 customers who will churn, allowing proactive intervention before they leave.
-        """)
+        </div>
+        """, unsafe_allow_html=True)
 
     # Business Recommendations
     st.markdown("---")
     st.subheader("💡 Key Business Recommendations")
 
+    st.markdown("""
+    <style>
+    .recommendation-box {
+        min-height: 240px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .recommendation-box:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .rec-box-green {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-left: 5px solid #28a745;
+    }
+    .rec-box-yellow {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-left: 5px solid #ffc107;
+    }
+    .rec-box-blue {
+        background: linear-gradient(135deg, #e8f4f8 0%, #cfe2f3 100%);
+        border-left: 5px solid #17a2b8;
+    }
+    .recommendation-box h4 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        color: #2c3e50;
+    }
+    .recommendation-box ul {
+        flex-grow: 1;
+        margin: 0.5rem 0;
+        padding-left: 1.2rem;
+    }
+    .recommendation-box li {
+        margin: 0.5rem 0;
+        color: #34495e;
+        line-height: 1.4;
+    }
+    .impact-badge {
+        margin-top: 1rem;
+        padding: 0.5rem;
+        background: rgba(255,255,255,0.8);
+        border-radius: 0.4rem;
+        font-weight: 600;
+        text-align: center;
+        color: #2c3e50;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
         st.markdown("""
-        <div class="success-box">
-        <h4>🎯 Target High-Risk Segments</h4>
-        <ul>
-            <li>Month-to-month contract customers</li>
-            <li>New customers (< 12 months tenure)</li>
-            <li>Electronic check payment users</li>
-        </ul>
-        <b>Expected Impact:</b> 20-30% reduction in churn
+        <div class="recommendation-box rec-box-green">
+            <div>
+                <h4>🎯 Target High-Risk Segments</h4>
+                <ul>
+                    <li>Month-to-month contract customers</li>
+                    <li>New customers (&lt; 12 months tenure)</li>
+                    <li>Electronic check payment users</li>
+                </ul>
+            </div>
+            <div class="impact-badge">Expected Impact: 20-30% reduction</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown("""
-        <div class="warning-box">
-        <h4>📈 Enhance Service Offerings</h4>
-        <ul>
-            <li>Promote tech support services</li>
-            <li>Bundle online security features</li>
-            <li>Improve fiber optic service quality</li>
-        </ul>
-        <b>Expected Impact:</b> 15-20% churn reduction
+        <div class="recommendation-box rec-box-yellow">
+            <div>
+                <h4>📈 Enhance Service Offerings</h4>
+                <ul>
+                    <li>Promote tech support services</li>
+                    <li>Bundle online security features</li>
+                    <li>Improve fiber optic service quality</li>
+                </ul>
+            </div>
+            <div class="impact-badge">Expected Impact: 15-20% reduction</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col3:
         st.markdown("""
-        <div class="insight-box">
-        <h4>🔄 Contract Optimization</h4>
-        <ul>
-            <li>Incentivize annual contract upgrades</li>
-            <li>Offer early renewal discounts</li>
-            <li>Auto-payment enrollment bonuses</li>
-        </ul>
-        <b>Expected Impact:</b> 25-35% churn reduction
+        <div class="recommendation-box rec-box-blue">
+            <div>
+                <h4>🔄 Contract Optimization</h4>
+                <ul>
+                    <li>Incentivize annual contract upgrades</li>
+                    <li>Offer early renewal discounts</li>
+                    <li>Auto-payment enrollment bonuses</li>
+                </ul>
+            </div>
+            <div class="impact-badge">Expected Impact: 25-35% reduction</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2446,9 +2604,29 @@ def page_about_data():
 def main():
     """Main application."""
 
-    # Sidebar
-    st.sidebar.image("https://via.placeholder.com/150x50/1f77b4/ffffff?text=TelcoConnect",
-                     use_container_width=True)
+    # Sidebar - Modern branding
+    st.sidebar.markdown("""
+    <div style="text-align: center; padding: 1rem 0;">
+        <h1 style="
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            letter-spacing: -0.5px;
+        ">ChurnIQ</h1>
+        <p style="
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            margin: 0.2rem 0 0 0;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        ">Analytics Platform</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
