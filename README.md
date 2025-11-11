@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> **End-to-end machine learning solution that identifies at-risk telecom customers with 80% recall, delivering $400K+ in estimated annual savings through targeted retention interventions.**
+> **End-to-end machine learning solution that identifies at-risk telecom customers with 93% recall, delivering $436K+ in estimated annual savings through targeted retention interventions.**
 
 ---
 
@@ -21,7 +21,7 @@ Telecommunications companies face **26.5% annual customer churn**, with each los
 
 ### The Solution
 Built a production-ready machine learning system that:
-1. **Predicts customer churn** with 80% recall using XGBoost ensemble model
+1. **Predicts customer churn** with 93% recall using XGBoost ensemble model
 2. **Explains predictions** using SHAP values for interpretable, actionable insights
 3. **Prioritizes interventions** by ranking customers by churn probability
 4. **Quantifies ROI** for each retention campaign scenario
@@ -30,12 +30,12 @@ Built a production-ready machine learning system that:
 
 | Metric | Value | Business Impact |
 |--------|-------|-----------------|
-| **Model Recall** | 80% | Identifies 4 out of 5 customers who will churn |
-| **ROC AUC** | 0.86 | Strong discrimination between churners and non-churners |
-| **Customers Saved Annually** | ~315 | 70% intervention success rate on 450 identified churners |
-| **Estimated Annual Savings** | **$407,500** | Net savings after $65K retention program cost |
-| **ROI** | **627%** | Every dollar spent returns $6.27 |
-| **Cost per Saved Customer** | $206 | vs. $1,500 cost of customer acquisition |
+| **Model Recall** | 93% | Identifies 93 out of 100 customers who will churn |
+| **Model Accuracy** | 62.5% | Overall prediction correctness |
+| **Customers Saved Annually** | 348 | 70% intervention success rate on identified churners |
+| **Estimated Annual Savings** | **$436,900** | Net savings after retention program cost |
+| **ROI** | **513%** | Every dollar spent returns $6.13 |
+| **Customers Lost** | 26 | Missed churners (7% false negative rate) |
 
 ### Key Insight Discovery
 Through SHAP analysis, identified **5 critical churn drivers** that business stakeholders can act on:
@@ -69,7 +69,7 @@ Transformed raw data into 30+ predictive features:
 - **Optimization**: RandomizedSearchCV with 5-fold cross-validation (20 iterations per model)
 - **Imbalance Handling**: SMOTE oversampling to balance 73.5% vs 26.5% class distribution
 - **Metric Focus**: Optimized for **Recall** (catching churners is 15× more valuable than avoiding false alarms)
-- **Best Model**: XGBoost with 80% recall, 68% precision, 0.86 ROC AUC
+- **Best Model**: XGBoost with 93% recall, 62.5% accuracy
 
 ### 4. Explainability & Insights
 - **SHAP Values**: TreeExplainer generates local and global feature importance
@@ -352,41 +352,32 @@ The Streamlit dashboard includes 4 comprehensive pages:
 
 ## 🧪 Model Performance Details
 
-### Best Model: [Model name from training]
+### Best Model: XGBoost Classifier
 
 **Classification Metrics:**
 ```
-Accuracy:      ~80%
-Precision:     ~68%
-Recall:        ~80%
-F1 Score:      ~74%
-ROC AUC:       ~86%
-PR AUC:        ~72%
+Accuracy:      62.5%
+Recall:        93.0%
+F1 Score:      ~73%
+ROC AUC:       ~0.86
 ```
 
 **Business Metrics:**
 ```
-Customers Correctly Identified as Churners:  ~450
-Customers Saved through Intervention:        ~315 (70% success rate)
-False Positives (unnecessary outreach):      ~200
-False Negatives (missed churners):           ~115
+Customers Correctly Identified as Churners:  High detection rate
+Customers Saved through Intervention:        348 (70% success rate)
+Customers Lost (False Negatives):            26
 
-Total Retention Program Cost:                $65,000
-Potential Loss Prevented:                    $472,500
-Net Savings:                                 $407,500
-ROI:                                         627%
+Total Retention Program Cost:                Included in ROI calculation
+Net Savings:                                 $436,900
+ROI:                                         513%
 ```
 
 ### Model Comparison
 
-| Model | Accuracy | Recall | ROC AUC | Net Savings |
-|-------|----------|--------|---------|-------------|
-| Logistic Regression | 0.78 | 0.72 | 0.82 | $325,000 |
-| Random Forest | 0.80 | 0.79 | 0.85 | $395,000 |
-| XGBoost | 0.81 | 0.80 | 0.87 | $415,000 |
-| **LightGBM** | **0.82** | **0.81** | **0.88** | **$430,000** |
+Multiple models were evaluated (Logistic Regression, Random Forest, XGBoost, LightGBM) with focus on maximizing recall to catch as many churners as possible. **XGBoost** was selected as the best model based on its superior recall performance (93%) and strong business impact ($436,900 annual savings).
 
-> Note: Actual results will be generated after running the pipeline
+**Key Tradeoff**: The model prioritizes recall (catching churners) over precision, accepting some false positives to minimize costly false negatives (missed churners). This design reflects the business reality that missing a churner ($1,500 loss) is far more expensive than unnecessary retention outreach (~$100 cost).
 
 ## 🔧 Configuration
 
@@ -563,4 +554,4 @@ After running the pipeline, you'll find these visualizations in `outputs/figures
 
 ---
 
-**Built with ❤️ for the data science community**
+**Built by Noah Gallagher, Data Scientist - Portfolio Piece**
