@@ -99,11 +99,30 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* Sidebar - fixed width */
+    /* Sidebar - responsive width */
     section[data-testid="stSidebar"] {
-        width: 300px !important;
-        min-width: 300px !important;
-        max-width: 300px !important;
+        width: 320px !important;
+        min-width: 280px !important;
+        max-width: 320px !important;
+    }
+
+    /* Sidebar collapse button positioning fix */
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        width: 0px !important;
+        min-width: 0px !important;
+    }
+
+    /* Adjust main content when sidebar is collapsed */
+    section[data-testid="stSidebar"][aria-expanded="false"] ~ .main {
+        margin-left: 0 !important;
+    }
+
+    /* Mobile responsiveness for sidebar */
+    @media (max-width: 768px) {
+        section[data-testid="stSidebar"] {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
     }
 
     /* Fix column layout - let columns share space properly */
@@ -175,6 +194,62 @@ st.markdown("""
         padding: 1.2rem !important;
         border-radius: 0.75rem !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+    }
+
+    /* Download button styling */
+    .stDownloadButton button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 0.5rem !important;
+        padding: 0.6rem 1rem !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .stDownloadButton button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+    }
+
+    /* Sidebar metrics styling */
+    [data-testid="stSidebar"] .stMetric {
+        background: white;
+        padding: 0.8rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    [data-testid="stSidebar"] .stMetric label {
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        color: #555 !important;
+    }
+
+    [data-testid="stSidebar"] .stMetric [data-testid="stMetricValue"] {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        color: #1f77b4 !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-header {
+            font-size: 1.8rem !important;
+        }
+
+        div[data-testid="column"] {
+            padding: 0 0.3rem !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -2682,65 +2757,143 @@ def main():
     st.markdown('<div style="padding-bottom: 0.5rem;"></div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    # Sidebar - Professional contact header
+    # Sidebar - Professional contact header with improved design
     st.sidebar.markdown("""
-    <div style="text-align: center; padding: 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+    <div style="text-align: center; padding: 1.5rem 0.75rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
         <h1 style="
-            font-size: 1.6rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: white;
             margin: 0 0 0.3rem 0;
             letter-spacing: -0.5px;
         ">Noah Gallagher</h1>
         <p style="
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: rgba(255,255,255,0.95);
             margin: 0;
             font-weight: 500;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         ">Data Scientist</p>
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.3);">
-            <p style="margin: 0.4rem 0; font-size: 0.8rem;">
-                <a href="mailto:noahgallagher1@gmail.com" style="color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+        <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.3);">
+            <p style="margin: 0.3rem 0; font-size: 0.75rem;">
+                <a href="mailto:noahgallagher1@gmail.com" style="color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
                     <span>📧</span> noahgallagher1@gmail.com
                 </a>
             </p>
         </div>
-        <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-            <a href="https://github.com/noahgallagher1" target="_blank" style="color: white; text-decoration: none; font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 1rem; transition: all 0.2s;">
+        <div style="display: flex; justify-content: center; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap;">
+            <a href="https://github.com/noahgallagher1" target="_blank" style="color: white; text-decoration: none; font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 0.35rem 0.7rem; border-radius: 1rem; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.3);">
                 GitHub
             </a>
-            <a href="https://www.linkedin.com/in/noahgallagher/" target="_blank" style="color: white; text-decoration: none; font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 1rem; transition: all 0.2s;">
+            <a href="https://www.linkedin.com/in/noahgallagher/" target="_blank" style="color: white; text-decoration: none; font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 0.35rem 0.7rem; border-radius: 1rem; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.3);">
                 LinkedIn
             </a>
-            <a href="https://noahgallagher1.github.io/MySite/" target="_blank" style="color: white; text-decoration: none; font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 1rem; transition: all 0.2s;">
+            <a href="https://noahgallagher1.github.io/MySite/" target="_blank" style="color: white; text-decoration: none; font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 0.35rem 0.7rem; border-radius: 1rem; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.3);">
                 Portfolio
             </a>
         </div>
-        <div style="margin-top: 0.8rem;">
-            <a href="https://github.com/noahgallagher1/customer-churn-prediction" target="_blank" style="color: rgba(255,255,255,0.9); text-decoration: none; font-size: 0.7rem; display: inline-block;">
-                🔗 View Project Repository
+        <div style="margin-top: 0.7rem;">
+            <a href="https://github.com/noahgallagher1/customer-churn-prediction" target="_blank" style="color: rgba(255,255,255,0.9); text-decoration: none; font-size: 0.68rem; display: inline-block;">
+                🔗 View Repository
             </a>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📖 About")
-    st.sidebar.info(
-        "This dashboard provides comprehensive insights into customer churn prediction "
-        "using machine learning and explainability techniques (SHAP)."
-    )
+    # Research Paper Download Section - COMMENTED OUT FOR NOW
+    # st.sidebar.markdown("""
+    # <div style="
+    #     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    #     padding: 1rem;
+    #     border-radius: 0.75rem;
+    #     margin-bottom: 1rem;
+    #     box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+    #     text-align: center;
+    # ">
+    #     <p style="
+    #         color: white;
+    #         font-size: 0.95rem;
+    #         font-weight: 600;
+    #         margin: 0 0 0.5rem 0;
+    #         letter-spacing: 0.3px;
+    #     ">📄 Research Paper</p>
+    #     <p style="
+    #         color: rgba(255,255,255,0.9);
+    #         font-size: 0.7rem;
+    #         margin: 0 0 0.8rem 0;
+    #         line-height: 1.3;
+    #     ">Publication-quality project summary for interviews & portfolio</p>
+    # </div>
+    # """, unsafe_allow_html=True)
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 Quick Stats")
+    # # Download button for research paper
+    # pdf_path = Path("Customer_Churn_Prediction_Research_Paper.pdf")
+    # if pdf_path.exists():
+    #     with open(pdf_path, "rb") as pdf_file:
+    #         pdf_bytes = pdf_file.read()
+    #         st.sidebar.download_button(
+    #             label="📥 Download Research Paper",
+    #             data=pdf_bytes,
+    #             file_name="Customer_Churn_Prediction_Research_Paper.pdf",
+    #             mime="application/pdf",
+    #             use_container_width=True
+    #         )
+    # else:
+    #     st.sidebar.info("📄 Research paper is being generated...")
+
+    # st.sidebar.markdown("---")
+
+    # About section with improved styling
+    st.sidebar.markdown("""
+    <div style="
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #1f77b4;
+        margin-bottom: 1rem;
+    ">
+        <p style="
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1f77b4;
+            margin: 0 0 0.5rem 0;
+        ">📖 About This Dashboard</p>
+        <p style="
+            font-size: 0.75rem;
+            color: #555;
+            margin: 0;
+            line-height: 1.4;
+        ">Comprehensive insights into customer churn prediction using machine learning and SHAP explainability.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Quick Stats section with improved styling
+    st.sidebar.markdown("""
+    <div style="
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #28a745;
+        margin-bottom: 1rem;
+    ">
+        <p style="
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #28a745;
+            margin: 0 0 0.5rem 0;
+        ">📊 Quick Stats</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     try:
         metrics = joblib.load(config.METRICS_FILE)
-        st.sidebar.metric("Model Recall", f"{metrics.get('recall', 0)*100:.1f}%")
-        st.sidebar.metric("ROI", f"{metrics.get('roi_percentage', 0):.0f}%")
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            st.metric("Model Recall", f"{metrics.get('recall', 0)*100:.1f}%")
+        with col2:
+            st.metric("ROI", f"{metrics.get('roi_percentage', 0):.0f}%")
     except:
-        pass
+        st.sidebar.caption("📊 Metrics loading...")
 
     # Route to page based on session state
     page = st.session_state.current_page
