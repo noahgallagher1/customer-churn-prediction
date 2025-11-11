@@ -2630,7 +2630,7 @@ def main():
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Dashboard"
 
-    # Top Navigation Bar - Add CSS for better button styling
+    # Top Navigation Bar - Add CSS for better button styling and spacing
     st.markdown("""
     <style>
     /* Navigation bar container styling */
@@ -2652,6 +2652,9 @@ def main():
     }
     </style>
     """, unsafe_allow_html=True)
+
+    # Add top spacing for navigation bar visibility
+    st.markdown('<div style="padding-top: 1rem;"></div>', unsafe_allow_html=True)
 
     # Create navigation buttons
     col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -2675,6 +2678,8 @@ def main():
         if st.button("📚 About Data", width="stretch", key="nav_data"):
             st.session_state.current_page = "About the Data"
 
+    # Add bottom spacing after navigation
+    st.markdown('<div style="padding-bottom: 0.5rem;"></div>', unsafe_allow_html=True)
     st.markdown("---")
 
     # Sidebar - Professional contact header
