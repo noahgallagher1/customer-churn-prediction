@@ -85,7 +85,13 @@ def create_shap_explainer(
 
     if 'XGB' in model_type or 'LGBM' in model_type or 'RandomForest' in model_type:
         logger.info(f"Using TreeExplainer for {model_type}")
-        explainer = shap.TreeExplainer(model)
+        try:
+            explainer = shap.TreeExplainer(model)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"TreeExplainer failed with error: {e}")
+            logger.info("Falling back to model feature importances instead")
+            # Return None to signal that SHAP failed, we'll use feature_importances_ instead
+            return None
     else:
         logger.info(f"Using KernelExplainer for {model_type}")
         explainer = shap.KernelExplainer(
@@ -360,6 +366,7 @@ def generate_business_insights(
 
     for idx, row in top_features.iterrows():
         feature = row['feature']
+        # Handle both SHAP format (mean_abs_shap) and feature importance format (importance)
         importance = row.get('mean_abs_shap', row.get('importance', 0))
 
         # Find matching insight
@@ -406,6 +413,41 @@ def explainability_pipeline(
 
     # Create explainer
     explainer = create_shap_explainer(model, X_test, sample_size=100)
+
+    # Check if SHAP explainer was created successfully
+    if explainer is None:
+        logger.warning("SHAP explainer creation failed. Using model feature importances as fallback.")
+        # Use model's feature_importances_ attribute
+        if hasattr(model, 'feature_importances_'):
+            importances = model.feature_importances_
+            feature_importance = pd.DataFrame({
+                'feature': feature_names,
+                'importance': importances
+            }).sort_values('importance', ascending=False)
+
+            # Save feature importance
+            config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+            feature_importance.to_csv(config.REPORTS_DIR / 'shap_feature_importance.csv', index=False)
+            logger.info("Saved feature importances (from model, not SHAP)")
+
+            # Generate basic insights
+            insights = generate_business_insights(feature_importance)
+            logger.info(f"\n{insights}")
+
+            # Save insights
+            insights_file = config.REPORTS_DIR / 'business_insights.txt'
+            with open(insights_file, 'w') as f:
+                f.write(insights)
+            logger.info(f"Saved business insights to {insights_file}")
+
+            logger.info("="*60)
+            logger.info("✓ Explainability Pipeline Complete (Feature Importances Only)")
+            logger.info("="*60)
+
+            return None, None, feature_importance
+        else:
+            logger.error("Model does not have feature_importances_ attribute. Cannot generate explanations.")
+            return None, None, None
 
     # Calculate SHAP values
     shap_values, X_sample = calculate_shap_values(explainer, X_test, sample_size=n_samples)

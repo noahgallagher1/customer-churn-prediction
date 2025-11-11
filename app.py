@@ -139,7 +139,7 @@ st.markdown("""
         background-color: #e8f4f8;
         padding: 1rem;
         border-radius: 0.5rem;
-        margin: 1rem 0;
+        border-left: 4px solid #17a2b8;
     }
     .warning-box {
         background-color: #fff3cd;

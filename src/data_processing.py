@@ -15,19 +15,6 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import joblib
 import config
 
-def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
-    """Handle any remaining missing values."""
-    logger.info("Checking for missing values")
-    
-    # Drop any rows with NaN
-    rows_before = len(df)
-    df = df.dropna()
-    if rows_before > len(df):
-        logger.warning(f"Dropped {rows_before - len(df)} rows with NaN values")
-    
-    logger.info(f"✓ No missing values. Shape: {df.shape}")
-    return df
-
 # Set up logging
 logging.basicConfig(
     level=getattr(logging, config.LOG_LEVEL),
@@ -194,6 +181,23 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
         )
         logger.info("Created has_premium_services feature")
 
+    # Handle any remaining NaN values introduced by feature engineering
+    nan_counts = df.isna().sum()
+    if nan_counts.any():
+        logger.warning(f"Found NaN values after feature engineering:\n{nan_counts[nan_counts > 0]}")
+        # Fill numerical NaN with median
+        numerical_cols = df.select_dtypes(include=[np.number]).columns
+        for col in numerical_cols:
+            if df[col].isna().any():
+                df[col] = df[col].fillna(df[col].median())
+                logger.info(f"Filled NaN in {col} with median")
+        # Fill categorical NaN with mode
+        categorical_cols = df.select_dtypes(include=['object']).columns
+        for col in categorical_cols:
+            if df[col].isna().any():
+                df[col] = df[col].fillna(df[col].mode()[0])
+                logger.info(f"Filled NaN in {col} with mode")
+
     logger.info(f"Feature engineering complete. New shape: {df.shape}")
     return df
 
@@ -246,6 +250,14 @@ def encode_features(
     if categorical_cols:
         df = pd.get_dummies(df, columns=categorical_cols, drop_first=True, dtype=int)
         logger.info(f"One-hot encoded {len(categorical_cols)} categorical columns")
+
+    # Handle any NaN values introduced during encoding
+    nan_counts = df.isna().sum()
+    if nan_counts.sum() > 0:
+        logger.warning(f"Found NaN values after encoding:\n{nan_counts[nan_counts > 0]}")
+        # Fill all NaN with 0 (safe for encoded features)
+        df = df.fillna(0)
+        logger.info("Filled all NaN values with 0")
 
     logger.info(f"Encoding complete. Final shape: {df.shape}")
     return df, encoders
@@ -358,6 +370,17 @@ def save_processed_data(
 
     logger.info(f"Saving processed data to {output_dir}")
 
+    # Final NaN check before saving
+    if X_train.isna().any().any():
+        logger.error(f"WARNING: X_train contains NaN values:\n{X_train.isna().sum()[X_train.isna().sum() > 0]}")
+        X_train = X_train.fillna(0)
+        logger.info("Filled X_train NaN values with 0")
+
+    if X_test.isna().any().any():
+        logger.error(f"WARNING: X_test contains NaN values:\n{X_test.isna().sum()[X_test.isna().sum() > 0]}")
+        X_test = X_test.fillna(0)
+        logger.info("Filled X_test NaN values with 0")
+
     # Save train/test data
     train_data = X_train.copy()
     train_data[config.TARGET_COLUMN] = y_train
@@ -428,9 +451,6 @@ def process_pipeline(force_reprocess: bool = False) -> None:
 
     # Scaling
     df, scaler = scale_features(df, fit_scaler=True)
-	
-    # Handle any remaining missing values
-    df = handle_missing_values(df)
 
     # Train-test split
     X_train, X_test, y_train, y_test = prepare_train_test_split(df)
