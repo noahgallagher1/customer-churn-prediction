@@ -34,7 +34,33 @@ st.set_page_config(
 
 # AGGRESSIVE CSS - PERMANENT FULL WIDTH FIX
 st.markdown("""
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+    /* Font Awesome Icon Styling */
+    .fa-icon {
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .fa-icon-lg {
+        font-size: 1.3em;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .fa-icon-xl {
+        font-size: 1.5em;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+    /* Status Icon Colors */
+    .icon-success { color: #28a745; }
+    .icon-warning { color: #ffc107; }
+    .icon-danger { color: #dc3545; }
+    .icon-info { color: #17a2b8; }
+    .icon-primary { color: #007bff; }
+
     /* FORCE full width - override ALL Streamlit defaults with !important */
     .block-container {
         padding-top: 0rem !important;
@@ -309,14 +335,14 @@ def load_test_data():
 
 def page_executive_summary():
     """Page 1: Executive Summary."""
-    st.markdown('<h1 class="main-header">📊 Customer Churn Prediction & Experimentation Platform</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header"><i class="fas fa-chart-line fa-icon-xl"></i>Customer Churn Prediction & Experimentation Platform</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #7f8c8d; font-size: 0.95rem; margin-top: -1rem; margin-bottom: 2rem; font-style: italic;">Portfolio Project by Noah Gallagher, Data Scientist (2025)</p>', unsafe_allow_html=True)
 
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
 
     if model is None:
-        st.warning("⚠️ Model not found. Please train the model first.")
+        st.warning("**Model not found. Please train the model first.**")
         return
 
     # Company header
@@ -424,7 +450,7 @@ def page_executive_summary():
     col_left, col_right = st.columns([1, 1])
 
     with col_left:
-        st.subheader("🎯 Top Risk Factors")
+        st.markdown("### <i class='fas fa-bullseye icon-danger fa-icon-lg'></i>Top Risk Factors", unsafe_allow_html=True)
 
         # Load feature importance
         try:
@@ -567,7 +593,7 @@ def page_executive_summary():
             # Add interpretive statement with custom styling for alignment
             st.markdown(f"""
             <div class="insight-box" style="margin-top: 1rem; min-height: 200px;">
-            <strong>📊 What This Chart Tells Us:</strong><br><br>
+            <strong><i class='fas fa-chart-bar icon-primary fa-icon'></i>What This Chart Tells Us:</strong><br><br>
 
             The features shown above have the strongest <strong>correlation</strong> with customer churn predictions.
             Higher impact scores indicate features that, when present, are more strongly associated with
@@ -585,7 +611,7 @@ def page_executive_summary():
             st.info("Run the explainability pipeline to generate feature importance.")
 
     with col_right:
-        st.subheader("💰 Business Impact")
+        st.markdown("### <i class='fas fa-hand-holding-usd icon-success fa-icon-lg'></i>Business Impact", unsafe_allow_html=True)
 
         # ROI Calculation
         roi = metrics.get('roi_percentage', 0)
@@ -599,10 +625,10 @@ def page_executive_summary():
         fig = go.Figure(go.Indicator(
             mode="gauge+number+delta",
             value=roi,
-            domain={'x': [0, 1], 'y': [0, 1]},
+            domain={'x': [0, 1], 'y': [0.15, 1]},
             title={'text': "ROI %", 'font': {'size': 20}},
-            delta={'reference': 100, 'increasing': {'color': "green"}},
-            number={'suffix': "%", 'font': {'size': 40}},
+            delta={'reference': 100, 'increasing': {'color': "green"}, 'font': {'size': 20}},
+            number={'suffix': "%", 'font': {'size': 40}, 'valueformat': '.1f'},
             gauge={
                 'axis': {'range': [0, gauge_max], 'tickwidth': 1, 'tickcolor': "darkgray"},
                 'bar': {'color': config.PRIMARY_COLOR, 'thickness': 0.75},
@@ -623,11 +649,15 @@ def page_executive_summary():
             }
         ))
 
-        fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
+        fig.update_layout(
+            height=300,
+            template=config.PLOTLY_TEMPLATE,
+            margin=dict(t=40, b=10, l=20, r=20)
+        )
         st.plotly_chart(fig, width="stretch")
 
         # ROI explanation
-        st.caption(f"📊 Break-even at 100% ROI (red line). Current ROI: **{roi:.1f}%** - Excellent performance!")
+        st.caption(f"<i class='fas fa-info-circle icon-info'></i>Break-even at 100% ROI (red line). Current ROI: **{roi:.1f}%** - Excellent performance!", unsafe_allow_html=True)
 
         # Impact metrics with styled tiles
         st.markdown("""
@@ -666,14 +696,14 @@ def page_executive_summary():
         with col_a:
             st.markdown(f"""
             <div class="impact-tile impact-tile-green">
-                <div class="impact-label">✓ Customers Saved</div>
+                <div class="impact-label"><i class="fas fa-check-circle"></i> Customers Saved</div>
                 <div class="impact-value">{customers_saved:,}</div>
             </div>
             """, unsafe_allow_html=True)
         with col_b:
             st.markdown(f"""
             <div class="impact-tile impact-tile-red">
-                <div class="impact-label">✗ Customers Lost</div>
+                <div class="impact-label"><i class="fas fa-times-circle"></i> Customers Lost</div>
                 <div class="impact-value">{customers_lost:,}</div>
             </div>
             """, unsafe_allow_html=True)
@@ -687,14 +717,14 @@ def page_executive_summary():
         st.markdown(f"""
         <div class="insight-box" style="margin-top: 1rem; min-height: 200px; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
-        <strong>💡 Business Translation:</strong><br><br>
+        <strong><i class='fas fa-lightbulb icon-warning fa-icon'></i>Business Translation:</strong><br><br>
         An ROI of {roi:.1f}% means that for every <strong>$1 spent</strong> on retention campaigns, we get back <strong>${roi_return:.2f}</strong>. With {customers_saved:,} customers saved, we're preventing significant revenue loss while maintaining cost-effective operations.
         <br><br>
         The model's <strong>{recall:.1f}%</strong> recall rate means we identify <strong>{customers_identified} out of every 10</strong> customers who will churn, allowing proactive intervention before they leave.
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(23, 162, 184, 0.3);">
         <small style="color: #5a6c7d; font-style: italic;">
-        💡 <strong>Key Takeaway:</strong> The model delivers exceptional value by identifying high-risk customers early, enabling targeted interventions that cost far less than acquiring new customers.
+        <i class='fas fa-star icon-warning'></i> <strong>Key Takeaway:</strong> The model delivers exceptional value by identifying high-risk customers early, enabling targeted interventions that cost far less than acquiring new customers.
         </small>
         </div>
         </div>
@@ -702,7 +732,7 @@ def page_executive_summary():
 
     # Business Recommendations
     st.markdown("---")
-    st.subheader("💡 Key Business Recommendations")
+    st.markdown("## <i class='fas fa-lightbulb icon-warning fa-icon-lg'></i>Key Business Recommendations", unsafe_allow_html=True)
 
     st.markdown("""
     <style>
@@ -766,7 +796,7 @@ def page_executive_summary():
         st.markdown("""
         <div class="recommendation-box rec-box-green">
             <div>
-                <h4>🎯 Target High-Risk Segments</h4>
+                <h4><i class='fas fa-bullseye'></i> Target High-Risk Segments</h4>
                 <ul>
                     <li>Month-to-month contract customers</li>
                     <li>New customers (&lt; 12 months tenure)</li>
@@ -781,7 +811,7 @@ def page_executive_summary():
         st.markdown("""
         <div class="recommendation-box rec-box-yellow">
             <div>
-                <h4>📈 Enhance Service Offerings</h4>
+                <h4><i class='fas fa-chart-line'></i> Enhance Service Offerings</h4>
                 <ul>
                     <li>Promote tech support services</li>
                     <li>Bundle online security features</li>
@@ -810,13 +840,13 @@ def page_executive_summary():
 
 def page_model_performance():
     """Page 2: Model Performance."""
-    st.markdown('<h1 class="main-header">📈 Model Performance Analysis</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header"><i class="fas fa-chart-area fa-icon-xl"></i>Model Performance Analysis</h1>', unsafe_allow_html=True)
 
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
 
     if model is None:
-        st.warning("⚠️ Model not found. Please train the model first.")
+        st.warning("**Model not found. Please train the model first.**")
         return
 
     # Model Selection
@@ -825,7 +855,7 @@ def page_model_performance():
     st.info(f"**Selected Model:** {model_name}")
 
     # Performance Metrics Table
-    st.subheader("📊 Performance Metrics")
+    st.markdown("## <i class='fas fa-tachometer-alt icon-primary fa-icon-lg'></i>Performance Metrics", unsafe_allow_html=True)
 
     col1, col2 = st.columns([2, 1])
 
@@ -862,7 +892,7 @@ def page_model_performance():
         )
 
     with col2:
-        st.markdown("### 🎯 Model Goal")
+        st.markdown("### <i class='fas fa-bullseye icon-danger fa-icon'></i>Model Goal", unsafe_allow_html=True)
         st.markdown("""
         <div class="insight-box">
         Our model is optimized for <b>Recall</b> to maximize detection
@@ -875,7 +905,7 @@ def page_model_performance():
 
     # Confusion Matrix
     st.markdown("---")
-    st.subheader("🔍 Confusion Matrix")
+    st.markdown("## <i class='fas fa-table icon-primary fa-icon-lg'></i>Confusion Matrix", unsafe_allow_html=True)
 
     col_cm, col_metrics = st.columns([1, 1])
 
@@ -914,7 +944,7 @@ def page_model_performance():
 
     with col_metrics:
         # Business metrics
-        st.markdown("### 💼 Business Metrics")
+        st.markdown("### <i class='fas fa-briefcase icon-info fa-icon'></i>Business Metrics", unsafe_allow_html=True)
 
         business_metrics = pd.DataFrame({
             'Metric': [
@@ -941,7 +971,7 @@ def page_model_performance():
 
     # ROC and PR Curves
     st.markdown("---")
-    st.subheader("📉 Performance Curves")
+    st.markdown("## <i class='fas fa-chart-line icon-primary fa-icon-lg'></i>Performance Curves", unsafe_allow_html=True)
 
     col_roc, col_pr = st.columns(2)
 
@@ -1006,7 +1036,7 @@ def page_model_performance():
     # Model Comparison
     if all_results is not None:
         st.markdown("---")
-        st.subheader("🏆 Model Comparison")
+        st.markdown("## <i class='fas fa-trophy icon-warning fa-icon-lg'></i>Model Comparison", unsafe_allow_html=True)
 
         comparison_data = []
         for model_name, result in all_results.items():
@@ -1051,13 +1081,13 @@ def page_model_performance():
 
 def page_customer_risk_scoring():
     """Page 4: Customer Risk Scoring."""
-    st.markdown('<h1 class="main-header">🎯 Customer Risk Scoring</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header"><i class="fas fa-user-shield fa-icon-xl"></i>Customer Risk Scoring</h1>', unsafe_allow_html=True)
 
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
 
     if model is None:
-        st.warning("⚠️ Model not found. Please train the model first.")
+        st.warning("**Model not found. Please train the model first.**")
         return
 
     st.markdown("### Predict churn risk for individual customers")
@@ -1089,20 +1119,20 @@ def page_customer_risk_scoring():
 
     # Display results
     st.markdown("---")
-    st.markdown("### 📊 Prediction Results")
+    st.markdown("### <i class='fas fa-poll icon-primary fa-icon'></i>Prediction Results", unsafe_allow_html=True)
 
     col_pred1, col_pred2, col_pred3 = st.columns(3)
 
     with col_pred1:
         # Risk level
         if churn_probability >= 0.7:
-            risk_level = "🔴 HIGH RISK"
+            risk_level = "<i class='fas fa-circle icon-danger'></i> HIGH RISK"
             risk_color = "danger-box"
         elif churn_probability >= 0.4:
-            risk_level = "🟡 MEDIUM RISK"
+            risk_level = "<i class='fas fa-circle icon-warning'></i> MEDIUM RISK"
             risk_color = "warning-box"
         else:
-            risk_level = "🟢 LOW RISK"
+            risk_level = "<i class='fas fa-circle icon-success'></i> LOW RISK"
             risk_color = "success-box"
 
         st.markdown(f'<div class="{risk_color}"><h2>{risk_level}</h2></div>',
@@ -1116,8 +1146,11 @@ def page_customer_risk_scoring():
         st.metric("Prediction", prediction)
         actual_label = "CHURN" if actual_churn == 1 else "NO CHURN"
         st.metric("Actual Status", actual_label)
-        correct = "✓" if (prediction == actual_label) else "✗"
-        st.metric("Prediction Correct", correct)
+        if prediction == actual_label:
+            correct = "<span style='color: #28a745; font-size: 1.5em;'><i class='fas fa-check-circle'></i> Correct</span>"
+        else:
+            correct = "<span style='color: #dc3545; font-size: 1.5em;'><i class='fas fa-times-circle'></i> Incorrect</span>"
+        st.markdown(f"**Prediction Accuracy:** {correct}", unsafe_allow_html=True)
 
     # Probability gauge
     fig = go.Figure(go.Indicator(
@@ -1147,7 +1180,7 @@ def page_customer_risk_scoring():
     # SHAP Explanation
     if shap_data is not None and shap_data.get('explainer') is not None:
         st.markdown("---")
-        st.markdown("### 🔍 Explanation - Why This Prediction?")
+        st.markdown("### <i class='fas fa-search icon-primary fa-icon'></i>Explanation - Why This Prediction?", unsafe_allow_html=True)
 
         explainer = shap_data['explainer']
 
@@ -1182,7 +1215,7 @@ def page_customer_risk_scoring():
 
     # Recommendations
     st.markdown("---")
-    st.markdown("### 💡 Recommended Actions")
+    st.markdown("### <i class='fas fa-lightbulb icon-warning fa-icon'></i>Recommended Actions", unsafe_allow_html=True)
 
     if churn_probability >= 0.7:
         st.markdown("""
@@ -1205,7 +1238,7 @@ def page_customer_risk_scoring():
     elif churn_probability >= 0.4:
         st.markdown("""
         <div class="warning-box">
-        <h4>⚠️ Medium Risk - Proactive Engagement</h4>
+        <h4><i class='fas fa-exclamation-triangle'></i> Medium Risk - Proactive Engagement</h4>
         <b>Recommended Actions:</b>
         <ol>
             <li>Send personalized retention offer</li>
@@ -1221,7 +1254,7 @@ def page_customer_risk_scoring():
     else:
         st.markdown("""
         <div class="success-box">
-        <h4>✓ Low Risk - Standard Engagement</h4>
+        <h4><i class='fas fa-check-circle'></i> Low Risk - Standard Engagement</h4>
         <b>Maintenance Actions:</b>
         <ol>
             <li>Continue standard customer service</li>
@@ -1236,13 +1269,13 @@ def page_customer_risk_scoring():
 
 def page_feature_importance():
     """Page 4: Feature Importance & Explainability."""
-    st.markdown('<h1 class="main-header">🔍 Feature Importance & Explainability</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header"><i class="fas fa-microscope fa-icon-xl"></i>Feature Importance & Explainability</h1>', unsafe_allow_html=True)
 
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
 
     if model is None:
-        st.warning("⚠️ Model not found. Please train the model first.")
+        st.warning("**Model not found. Please train the model first.**")
         return
 
     # Feature name mapping dictionary - converts technical names to business-friendly names
@@ -1310,7 +1343,7 @@ def page_feature_importance():
     }
 
     # Section 1: Global Feature Importance
-    st.markdown("## 📊 Global Feature Importance")
+    st.markdown("## <i class='fas fa-globe icon-primary fa-icon-lg'></i>Global Feature Importance", unsafe_allow_html=True)
     st.markdown("Understanding which features have the biggest impact on churn predictions across all customers.")
 
     try:
@@ -1366,7 +1399,7 @@ def page_feature_importance():
             st.plotly_chart(fig, width="stretch")
 
         with col2:
-            st.markdown("### 🎯 Key Insights")
+            st.markdown("### <i class='fas fa-bullseye icon-danger fa-icon'></i>Key Insights", unsafe_allow_html=True)
 
             # Get the top feature for context-specific recommendations
             top_feature = feature_importance_df.iloc[0]['feature']
@@ -1378,7 +1411,7 @@ def page_feature_importance():
                 st.markdown(f"{idx+1}. **{row['feature']}** (impact: {row['importance']:.3f})")
 
             st.markdown("---")
-            st.markdown("### 💡 Business Context")
+            st.markdown("### <i class='fas fa-lightbulb icon-warning fa-icon'></i>Business Context", unsafe_allow_html=True)
 
             # Provide specific recommendations based on top feature
             if 'Contract' in top_feature:
@@ -1412,7 +1445,7 @@ def page_feature_importance():
                 )
 
     except Exception as e:
-        st.warning("⚠️ SHAP feature importance not available. Using model feature importances.")
+        st.warning("**SHAP feature importance not available. Using model feature importances.**")
 
         # Fallback to model's feature_importances_ if available
         if hasattr(model, 'feature_importances_'):
@@ -1529,7 +1562,7 @@ def page_feature_importance():
                     st.plotly_chart(fig, width="stretch")
 
                 with col2:
-                    st.markdown("### 📈 Statistics")
+                    st.markdown("### <i class='fas fa-chart-bar icon-primary fa-icon'></i>Statistics", unsafe_allow_html=True)
 
                     not_churned_stats = analysis_df[analysis_df['Churn'] == 0][selected_feature]
                     churned_stats = analysis_df[analysis_df['Churn'] == 1][selected_feature]
@@ -1556,7 +1589,7 @@ def page_feature_importance():
 
                     # Interpretation
                     st.markdown("---")
-                    st.markdown("**💡 Insight:**")
+                    st.markdown("**<i class='fas fa-lightbulb icon-warning'></i> Insight:**", unsafe_allow_html=True)
                     if abs(mean_diff) > 0.1 * not_churned_stats.mean():
                         direction = "higher" if mean_diff > 0 else "lower"
                         st.warning(f"Churned customers have {direction} {display_name} on average (diff: {abs(mean_diff):.2f})")
@@ -1640,7 +1673,7 @@ def page_feature_importance():
                     st.plotly_chart(fig, width="stretch")
 
                 with col2:
-                    st.markdown("### 📊 Churn Rates")
+                    st.markdown("### <i class='fas fa-chart-pie icon-primary fa-icon'></i>Churn Rates", unsafe_allow_html=True)
 
                     # Show churn rate by category
                     churn_rate_df = pd.DataFrame({
@@ -1657,7 +1690,7 @@ def page_feature_importance():
                     highest_risk_rate = stats_df.iloc[highest_risk_idx]['churn_rate']
 
                     st.markdown("---")
-                    st.markdown("**⚠️ Highest Risk:**")
+                    st.markdown("**<i class='fas fa-exclamation-triangle icon-danger'></i> Highest Risk:**", unsafe_allow_html=True)
                     st.error(f"**{highest_risk_cat}**: {highest_risk_rate:.1f}% churn rate")
 
                     # Overall churn rate for comparison
@@ -1669,7 +1702,7 @@ def page_feature_importance():
 
     # Section 7: Individual Prediction Explanation
     st.markdown("---")
-    st.markdown("## 🎯 Individual Prediction Explanation")
+    st.markdown("## <i class='fas fa-user-check icon-primary fa-icon-lg'></i>Individual Prediction Explanation", unsafe_allow_html=True)
     st.markdown("Deep dive into why the model makes specific predictions for individual customers.")
 
     if test_data is not None:
@@ -1702,12 +1735,12 @@ def page_feature_importance():
             st.metric("Actual Status", actual_label)
 
         with col3:
-            correct = "✓ Correct" if (prediction == actual_label) else "✗ Incorrect"
+            correct = "<i class='fas fa-check-circle icon-success'></i> Correct" if (prediction == actual_label) else "<i class='fas fa-times-circle icon-danger'></i> Incorrect"
             st.metric("Accuracy", correct)
 
         # SHAP waterfall plot
         if shap_data is not None and shap_data.get('explainer') is not None:
-            st.markdown("### 📊 SHAP Waterfall Chart")
+            st.markdown("### <i class='fas fa-water icon-primary fa-icon'></i>SHAP Waterfall Chart", unsafe_allow_html=True)
             st.markdown("*Shows how each feature contributes to the prediction*")
 
             try:
@@ -1798,7 +1831,7 @@ average churn rate of {avg_churn_rate:.1f}%.
                     else:
                         explanation += "🚨 **URGENT**: This customer is high risk. Implement immediate retention strategies."
                 elif churn_probability >= 0.4:
-                    explanation += "⚠️ **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
+                    explanation += "<i class='fas fa-exclamation-circle icon-warning'></i> **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
                 else:
                     explanation += "✅ **MAINTAIN**: Continue standard customer service protocols."
 
@@ -1858,7 +1891,7 @@ Based on the overall model feature importances, the most important factors for p
                 if churn_probability >= 0.7:
                     explanation += "🚨 **URGENT**: This customer is high risk. Implement immediate retention strategies."
                 elif churn_probability >= 0.4:
-                    explanation += "⚠️ **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
+                    explanation += "<i class='fas fa-exclamation-circle icon-warning'></i> **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
                 else:
                     explanation += "✅ **MAINTAIN**: Continue standard customer service protocols."
 
@@ -1927,9 +1960,9 @@ Based on the overall model feature importances, the most important factors for p
         - ✅ Based on solid game theory foundations
 
         **Limitations:**
-        - ⚠️ Computationally expensive for large datasets
-        - ⚠️ Requires careful interpretation with correlated features
-        - ⚠️ Explanations are relative to the model, not ground truth
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Computationally expensive for large datasets
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Requires careful interpretation with correlated features
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Explanations are relative to the model, not ground truth
 
         ---
 
@@ -2591,10 +2624,10 @@ def page_about_data():
     with col2:
         st.markdown("### Ethical Considerations")
         st.warning("""
-        - ⚠️ Model predictions should not be used for discriminatory purposes
-        - ⚠️ Human review recommended for high-stakes decisions
-        - ⚠️ Regular monitoring for bias across demographics required
-        - ⚠️ Use predictions to improve experience, not punish customers
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Model predictions should not be used for discriminatory purposes
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Human review recommended for high-stakes decisions
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Regular monitoring for bias across demographics required
+        - <i class='fas fa-exclamation-triangle icon-warning'></i> Use predictions to improve experience, not punish customers
         """)
 
     # Section 9: Limitations
@@ -2852,7 +2885,7 @@ def main():
         with col2:
             st.metric("ROI", f"{metrics.get('roi_percentage', 0):.0f}%")
     except:
-        st.sidebar.caption("📊 Metrics loading...")
+        st.sidebar.caption("<i class='fas fa-spinner fa-spin'></i> Metrics loading...", unsafe_allow_html=True)
 
     # Route to page based on session state
     page = st.session_state.current_page
