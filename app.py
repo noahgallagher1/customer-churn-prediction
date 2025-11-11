@@ -1062,65 +1062,25 @@ def page_customer_risk_scoring():
 
     st.markdown("### Predict churn risk for individual customers")
 
-    # Two modes: Sample customer or manual input
-    mode = st.radio(
-        "Select input mode:",
-        ["Analyze Sample Customer", "Manual Input"],
-        horizontal=True
+    # Load test data
+    test_data = load_test_data()
+    if test_data is None:
+        st.error("Test data not available")
+        return
+
+    X_test = test_data.drop(config.TARGET_COLUMN, axis=1)
+    y_test = test_data[config.TARGET_COLUMN]
+
+    # Select customer
+    customer_idx = st.number_input(
+        "Select customer index (0 to {})".format(len(X_test) - 1),
+        min_value=0,
+        max_value=len(X_test) - 1,
+        value=0
     )
 
-    if mode == "Analyze Sample Customer":
-        # Load test data
-        test_data = load_test_data()
-        if test_data is None:
-            st.error("Test data not available")
-            return
-
-        X_test = test_data.drop(config.TARGET_COLUMN, axis=1)
-        y_test = test_data[config.TARGET_COLUMN]
-
-        # Select customer
-        customer_idx = st.number_input(
-            "Select customer index (0 to {})".format(len(X_test) - 1),
-            min_value=0,
-            max_value=len(X_test) - 1,
-            value=0
-        )
-
-        customer_data = X_test.iloc[customer_idx:customer_idx+1]
-        actual_churn = y_test.iloc[customer_idx]
-
-    else:
-        st.markdown("#### Enter Customer Information")
-
-        # Create input form (simplified version)
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            tenure = st.number_input("Tenure (months)", 0, 72, 12)
-            monthly_charges = st.number_input("Monthly Charges ($)", 0.0, 200.0, 50.0)
-            total_charges = st.number_input("Total Charges ($)", 0.0, 10000.0, 500.0)
-
-        with col2:
-            contract_type = st.selectbox("Contract Type",
-                                        ["Month-to-month", "One year", "Two year"])
-            payment_method = st.selectbox("Payment Method",
-                                         ["Electronic check", "Mailed check",
-                                          "Bank transfer (automatic)",
-                                          "Credit card (automatic)"])
-            internet_service = st.selectbox("Internet Service",
-                                           ["DSL", "Fiber optic", "No"])
-
-        with col3:
-            tech_support = st.selectbox("Tech Support", ["Yes", "No", "No internet service"])
-            online_security = st.selectbox("Online Security", ["Yes", "No", "No internet service"])
-            has_partner = st.selectbox("Has Partner", ["Yes", "No"])
-
-        # This is simplified - in production, you'd need to create a full feature vector
-        # matching the training data format
-        st.warning("⚠️ Manual input mode requires complete feature engineering pipeline. " +
-                  "Use 'Analyze Sample Customer' mode for demonstration.")
-        return
+    customer_data = X_test.iloc[customer_idx:customer_idx+1]
+    actual_churn = y_test.iloc[customer_idx]
 
     # Make prediction
     prediction_proba = model.predict_proba(customer_data)[0]
@@ -1154,11 +1114,10 @@ def page_customer_risk_scoring():
 
     with col_pred3:
         st.metric("Prediction", prediction)
-        if mode == "Analyze Sample Customer":
-            actual_label = "CHURN" if actual_churn == 1 else "NO CHURN"
-            st.metric("Actual Status", actual_label)
-            correct = "✓" if (prediction == actual_label) else "✗"
-            st.metric("Prediction Correct", correct)
+        actual_label = "CHURN" if actual_churn == 1 else "NO CHURN"
+        st.metric("Actual Status", actual_label)
+        correct = "✓" if (prediction == actual_label) else "✗"
+        st.metric("Prediction Correct", correct)
 
     # Probability gauge
     fig = go.Figure(go.Indicator(
