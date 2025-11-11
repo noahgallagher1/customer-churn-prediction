@@ -232,7 +232,8 @@ def load_test_data():
 
 def page_executive_summary():
     """Page 1: Executive Summary."""
-    st.markdown('<h1 class="main-header">📊 Executive Summary</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">📊 Customer Churn Prediction & Experimentation Platform</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #7f8c8d; font-size: 0.95rem; margin-top: -1rem; margin-bottom: 2rem; font-style: italic;">Portfolio Project by Noah Gallagher, Data Scientist (2025)</p>', unsafe_allow_html=True)
 
     # Load artifacts
     model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
@@ -609,13 +610,9 @@ def page_executive_summary():
         st.markdown(f"""
         <div class="insight-box" style="margin-top: 1rem;">
         <strong>💡 Business Translation:</strong><br><br>
-
-        An ROI of {roi:.1f}% means that for every $1 spent on retention campaigns,
-        we get back <strong>${roi_return:.2f}</strong>. With {customers_saved:,} customers saved,
-        we're preventing significant revenue loss while maintaining cost-effective operations.
+        An ROI of {roi:.1f}% means that for every <strong>$1 spent</strong> on retention campaigns, we get back <strong>${roi_return:.2f}</strong>. With {customers_saved:,} customers saved, we're preventing significant revenue loss while maintaining cost-effective operations.
         <br><br>
-        The model's <strong>{recall:.1f}%</strong> recall rate means we identify <strong>{customers_identified} out of every
-        10</strong> customers who will churn, allowing proactive intervention before they leave.
+        The model's <strong>{recall:.1f}%</strong> recall rate means we identify <strong>{customers_identified} out of every 10</strong> customers who will churn, allowing proactive intervention before they leave.
         </div>
         """, unsafe_allow_html=True)
 
@@ -2620,6 +2617,82 @@ def page_about_data():
 def main():
     """Main application."""
 
+    # Initialize session state for page navigation
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Dashboard"
+
+    # Top Navigation Bar
+    st.markdown("""
+    <style>
+    .top-nav {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 0.8rem 2rem;
+        margin: -4rem -4rem 2rem -4rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+    .nav-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    .nav-button {
+        background: rgba(255,255,255,0.15);
+        color: white;
+        padding: 0.6rem 1.2rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255,255,255,0.2);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .nav-button:hover {
+        background: rgba(255,255,255,0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .nav-button.active {
+        background: white;
+        color: #667eea;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Create navigation buttons
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+    with col1:
+        if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
+            st.session_state.current_page = "Dashboard"
+    with col2:
+        if st.button("📈 Model Performance", use_container_width=True, key="nav_model"):
+            st.session_state.current_page = "Model Performance"
+    with col3:
+        if st.button("🎯 Customer Risk", use_container_width=True, key="nav_risk"):
+            st.session_state.current_page = "Customer Risk Scoring"
+    with col4:
+        if st.button("🔍 Feature Importance", use_container_width=True, key="nav_features"):
+            st.session_state.current_page = "Feature Importance"
+    with col5:
+        if st.button("🧪 A/B Testing", use_container_width=True, key="nav_ab"):
+            st.session_state.current_page = "A/B Test Simulator"
+    with col6:
+        if st.button("📚 About Data", use_container_width=True, key="nav_data"):
+            st.session_state.current_page = "About the Data"
+
+    st.markdown("---")
+
     # Sidebar - Professional contact header
     st.sidebar.markdown("""
     <div style="text-align: center; padding: 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
@@ -2663,16 +2736,8 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
-        "Select Page",
-        ["Executive Summary", "Model Performance", "Customer Risk Scoring",
-         "Feature Importance", "A/B Test Simulator", "About the Data"],
-        label_visibility="collapsed"
-    )
-
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### About")
+    st.sidebar.markdown("### 📖 About")
     st.sidebar.info(
         "This dashboard provides comprehensive insights into customer churn prediction "
         "using machine learning and explainability techniques (SHAP)."
@@ -2688,8 +2753,10 @@ def main():
     except:
         pass
 
-    # Route to page
-    if page == "Executive Summary":
+    # Route to page based on session state
+    page = st.session_state.current_page
+
+    if page == "Dashboard":
         page_executive_summary()
     elif page == "Model Performance":
         page_model_performance()
