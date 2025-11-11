@@ -412,13 +412,22 @@ def page_executive_summary():
                 'monthly_charges_cat_low': 'Monthly Charges (Low)',
                 'monthly_charges_cat_medium': 'Monthly Charges (Medium)',
                 'monthly_charges_cat_high': 'Monthly Charges (High)',
+                'MonthlyCharges_cat_low': 'Monthly Charges (Low)',
+                'MonthlyCharges_cat_medium': 'Monthly Charges (Medium)',
+                'MonthlyCharges_cat_high': 'Monthly Charges (High)',
                 'tenure_group_0-1 year': 'Tenure (0-1 year)',
                 'tenure_group_1-2 years': 'Tenure (1-2 years)',
                 'tenure_group_2-3 years': 'Tenure (2-3 years)',
                 'tenure_group_3-4 years': 'Tenure (3-4 years)',
                 'tenure_group_4-5 years': 'Tenure (4-5 years)',
                 'tenure_group_5-6 years': 'Tenure (5-6 years)',
-                'tenure_group': 'Tenure Group'
+                'tenure_group': 'Tenure Group',
+                'tenure_group_0-12 months': 'Tenure (0-12 months)',
+                'tenure_group_12-24 months': 'Tenure (12-24 months)',
+                'tenure_group_24-36 months': 'Tenure (24-36 months)',
+                'tenure_group_36-48 months': 'Tenure (36-48 months)',
+                'tenure_group_48-60 months': 'Tenure (48-60 months)',
+                'tenure_group_60+ months': 'Tenure (60+ months)'
             }
 
             # Map technical names to business names
@@ -477,20 +486,22 @@ def page_executive_summary():
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # Add interpretive statement
-            st.info(f"""
-            **📊 What This Chart Tells Us:**
+            # Add interpretive statement with custom styling for alignment
+            st.markdown(f"""
+            <div class="insight-box" style="margin-top: 1rem;">
+            <strong>📊 What This Chart Tells Us:</strong><br><br>
 
-            The features shown above have the strongest **correlation** with customer churn predictions.
+            The features shown above have the strongest <strong>correlation</strong> with customer churn predictions.
             Higher impact scores indicate features that, when present, are more strongly associated with
             customers leaving.
-
-            **Business Insight:** The top factor, "{top_features.iloc[0]['display_name']}",
+            <br><br>
+            <strong>Business Insight:</strong> The top factor, "{top_features.iloc[0]['display_name']}",
             has an impact score of {top_features.iloc[0]['importance']:.3f}, meaning it's a critical
             signal in identifying at-risk customers. However, remember that correlation ≠ causation—
-            these features help us *predict* who will churn, but interventions should be validated
+            these features help us <em>predict</em> who will churn, but interventions should be validated
             through A/B testing to establish causal impact.
-            """)
+            </div>
+            """, unsafe_allow_html=True)
 
         except Exception as e:
             st.info("Run the explainability pipeline to generate feature importance.")
@@ -590,16 +601,21 @@ def page_executive_summary():
             """, unsafe_allow_html=True)
 
         # Add interpretive statement for ROI
+        # recall is already a percentage (e.g., 80.0), not a decimal (0.80)
+        recall_decimal = recall / 100.0  # Convert back to decimal for calculations
+        customers_identified = int(recall_decimal * 10)  # Out of 10 customers
+        roi_return = roi / 100.0 + 1.0  # Calculate return per dollar
+
         st.markdown(f"""
         <div class="insight-box" style="margin-top: 1rem;">
         <strong>💡 Business Translation:</strong><br><br>
 
         An ROI of {roi:.1f}% means that for every $1 spent on retention campaigns,
-        we get back ${roi/100 + 1:.2f}. With {customers_saved:,} customers saved,
+        we get back <strong>${roi_return:.2f}</strong>. With {customers_saved:,} customers saved,
         we're preventing significant revenue loss while maintaining cost-effective operations.
         <br><br>
-        The model's {recall:.1%} recall rate means we identify {int(recall*10):.0f} out of every
-        10 customers who will churn, allowing proactive intervention before they leave.
+        The model's <strong>{recall:.1f}%</strong> recall rate means we identify <strong>{customers_identified} out of every
+        10</strong> customers who will churn, allowing proactive intervention before they leave.
         </div>
         """, unsafe_allow_html=True)
 
@@ -2604,27 +2620,46 @@ def page_about_data():
 def main():
     """Main application."""
 
-    # Sidebar - Modern branding
+    # Sidebar - Professional contact header
     st.sidebar.markdown("""
-    <div style="text-align: center; padding: 1rem 0;">
+    <div style="text-align: center; padding: 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
         <h1 style="
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin: 0;
+            color: white;
+            margin: 0 0 0.3rem 0;
             letter-spacing: -0.5px;
-        ">ChurnIQ</h1>
+        ">Noah Gallagher</h1>
         <p style="
-            font-size: 0.75rem;
-            color: #7f8c8d;
-            margin: 0.2rem 0 0 0;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.95);
+            margin: 0;
             font-weight: 500;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        ">Analytics Platform</p>
+            letter-spacing: 1px;
+        ">Data Scientist</p>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.3);">
+            <p style="margin: 0.4rem 0; font-size: 0.8rem;">
+                <a href="mailto:noahgallagher1@gmail.com" style="color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <span>📧</span> noahgallagher1@gmail.com
+                </a>
+            </p>
+        </div>
+        <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+            <a href="https://github.com/noahgallagher1" target="_blank" style="color: white; text-decoration: none; font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 1rem; transition: all 0.2s;">
+                GitHub
+            </a>
+            <a href="https://www.linkedin.com/in/noahgallagher/" target="_blank" style="color: white; text-decoration: none; font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 1rem; transition: all 0.2s;">
+                LinkedIn
+            </a>
+            <a href="https://noahgallagher1.github.io/MySite/" target="_blank" style="color: white; text-decoration: none; font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 1rem; transition: all 0.2s;">
+                Portfolio
+            </a>
+        </div>
+        <div style="margin-top: 0.8rem;">
+            <a href="https://github.com/noahgallagher1/customer-churn-prediction" target="_blank" style="color: rgba(255,255,255,0.9); text-decoration: none; font-size: 0.7rem; display: inline-block;">
+                🔗 View Project Repository
+            </a>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2644,7 +2679,7 @@ def main():
     )
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### Quick Stats")
+    st.sidebar.markdown("### 📊 Quick Stats")
 
     try:
         metrics = joblib.load(config.METRICS_FILE)
@@ -2652,22 +2687,6 @@ def main():
         st.sidebar.metric("ROI", f"{metrics.get('roi_percentage', 0):.0f}%")
     except:
         pass
-
-    # Contact Information
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 👤 Contact")
-    st.sidebar.markdown("""
-    **Noah Gallagher**
-    *Data Scientist*
-
-    📧 [noahgallagher1@gmail.com](mailto:noahgallagher1@gmail.com)
-
-    🔗 **Links:**
-    - [GitHub Profile](https://github.com/noahgallagher1)
-    - [Project Repository](https://github.com/noahgallagher1/customer-churn-prediction)
-    - [LinkedIn](https://www.linkedin.com/in/noahgallagher/)
-    - [Portfolio](https://noahgallagher1.github.io/MySite/)
-    """)
 
     # Route to page
     if page == "Executive Summary":
