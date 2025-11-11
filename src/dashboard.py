@@ -904,7 +904,7 @@ def page_customer_risk_scoring():
     st.plotly_chart(fig, use_container_width=True)
 
     # SHAP Explanation
-    if shap_data is not None:
+    if shap_data is not None and shap_data.get('explainer') is not None:
         st.markdown("---")
         st.markdown("### 🔍 Explanation - Why This Prediction?")
 
@@ -1465,7 +1465,7 @@ def page_feature_importance():
             st.metric("Accuracy", correct)
 
         # SHAP waterfall plot
-        if shap_data is not None:
+        if shap_data is not None and shap_data.get('explainer') is not None:
             st.markdown("### 📊 SHAP Waterfall Chart")
             st.markdown("*Shows how each feature contributes to the prediction*")
 
@@ -1500,7 +1500,7 @@ def page_feature_importance():
         st.markdown("### 📝 Plain English Explanation")
 
         # Get top contributing features
-        if shap_data is not None:
+        if shap_data is not None and shap_data.get('explainer') is not None:
             try:
                 explainer = shap_data['explainer']
                 customer_shap = explainer.shap_values(customer_data)
