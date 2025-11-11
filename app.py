@@ -2697,57 +2697,170 @@ def main():
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Dashboard"
 
-    # Top Navigation Bar - Add CSS for better button styling and spacing
+    # Check for navigation clicks from query params
+    nav_page = st.query_params.get("nav_page")
+    if nav_page:
+        st.session_state.current_page = nav_page
+        st.query_params.clear()
+        st.rerun()
+
+    # Professional Navigation Bar with Active State Highlighting
+    current_page = st.session_state.current_page
+
+    # Navigation CSS - Modern, Professional, with Active States
     st.markdown("""
     <style>
-    /* Navigation bar container styling */
+    /* Navigation container */
+    .nav-container {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.25rem 0.75rem 1rem 0.75rem;
+        border-radius: 1rem;
+        margin: 1rem 0 1.5rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* Base navigation button styling */
     .stButton button {
-        height: 3rem !important;
+        height: 3.5rem !important;
         width: 100% !important;
-        font-size: 0.9rem !important;
-        font-weight: 500 !important;
-        border-radius: 0.5rem !important;
-        transition: all 0.3s ease !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+        border-radius: 0.75rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         white-space: nowrap !important;
-        padding: 0.6rem 0.8rem !important;
+        padding: 0.75rem 0.8rem !important;
+        border: 2px solid transparent !important;
+        background: white !important;
+        color: #495057 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    }
+
+    /* Hover state for all buttons */
+    .stButton button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        border-color: #667eea !important;
+        background: #f8f9ff !important;
+        color: #667eea !important;
+    }
+
+    /* Active state - applied via data attribute */
+    .stButton button:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
     }
 
     /* Make all navigation buttons the same size */
     div[data-testid="column"] button {
-        min-height: 3rem !important;
-        height: 3rem !important;
+        min-height: 3.5rem !important;
+        height: 3.5rem !important;
+    }
+
+    /* Icon styling in buttons */
+    .stButton button i {
+        margin-right: 0.4rem;
+        font-size: 1.05em;
+    }
+
+    /* Active navigation button styling */
+    .nav-button-active {
+        height: 3.5rem;
+        width: 100%;
+        font-size: 0.88rem;
+        font-weight: 700;
+        border-radius: 0.75rem;
+        border: none;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        cursor: default;
+        padding: 0.75rem 0.8rem;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        position: relative;
+        text-align: center;
+    }
+
+    .nav-button-active::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.8), transparent);
+        border-radius: 2px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # Add top spacing for navigation bar visibility
-    st.markdown('<div style="padding-top: 1rem;"></div>', unsafe_allow_html=True)
+    # Navigation container with visual separation
+    st.markdown('<div class="nav-container">', unsafe_allow_html=True)
 
-    # Create navigation buttons
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    # Create navigation buttons with clear hierarchy
+    nav_cols = st.columns([1, 1, 1, 1, 1, 1], gap="small")
 
-    with col1:
-        if st.button("📊 Dashboard", width="stretch", key="nav_dashboard"):
-            st.session_state.current_page = "Dashboard"
-    with col2:
-        if st.button("📈 Model Performance", width="stretch", key="nav_model"):
-            st.session_state.current_page = "Model Performance"
-    with col3:
-        if st.button("🎯 Customer Risk", width="stretch", key="nav_risk"):
-            st.session_state.current_page = "Customer Risk Scoring"
-    with col4:
-        if st.button("🔍 Feature Importance", width="stretch", key="nav_features"):
-            st.session_state.current_page = "Feature Importance"
-    with col5:
-        if st.button("🧪 A/B Testing", width="stretch", key="nav_ab"):
-            st.session_state.current_page = "A/B Test Simulator"
-    with col6:
-        if st.button("📚 About Data", width="stretch", key="nav_data"):
-            st.session_state.current_page = "About the Data"
+    # Define navigation items with Font Awesome icons
+    nav_items = [
+        ("Dashboard", "fas fa-home", "Dashboard"),
+        ("Performance", "fas fa-chart-area", "Model Performance"),
+        ("Risk Scoring", "fas fa-user-shield", "Customer Risk Scoring"),
+        ("Explainability", "fas fa-microscope", "Feature Importance"),
+        ("A/B Testing", "fas fa-flask", "A/B Test Simulator"),
+        ("Data Info", "fas fa-database", "About the Data")
+    ]
 
-    # Add bottom spacing after navigation
-    st.markdown('<div style="padding-bottom: 0.5rem;"></div>', unsafe_allow_html=True)
-    st.markdown("---")
+    for idx, (label, icon, page_name) in enumerate(nav_items):
+        with nav_cols[idx]:
+            # Check if this is the active page
+            is_active = (current_page == page_name)
+
+            # Create button with conditional styling
+            if is_active:
+                # Active button with primary gradient - non-clickable
+                button_html = f"""
+                <div class="nav-button-active">
+                    <i class='{icon}' style='margin-right: 0.4rem; font-size: 1.05em;'></i>
+                    {label}
+                </div>
+                """
+                st.markdown(button_html, unsafe_allow_html=True)
+            else:
+                # Inactive button - HTML button that triggers form submission
+                button_html = f"""
+                <form action="" method="get">
+                    <button type="submit" name="nav_page" value="{page_name}" style="
+                        height: 3.5rem;
+                        width: 100%;
+                        font-size: 0.88rem;
+                        font-weight: 600;
+                        border-radius: 0.75rem;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        white-space: nowrap;
+                        padding: 0.75rem 0.8rem;
+                        border: 2px solid transparent;
+                        background: white;
+                        color: #495057;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'; this.style.borderColor='#667eea'; this.style.background='#f8f9ff'; this.style.color='#667eea';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; this.style.borderColor='transparent'; this.style.background='white'; this.style.color='#495057';">
+                        <i class='{icon}' style='margin-right: 0.4rem; font-size: 1.05em;'></i>
+                        {label}
+                    </button>
+                </form>
+                """
+                st.markdown(button_html, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Add subtle divider
+    st.markdown('<div style="height: 1px; background: linear-gradient(90deg, transparent, #dee2e6, transparent); margin: 0 0 1rem 0;"></div>', unsafe_allow_html=True)
 
     # Sidebar - Professional contact header with improved design
     st.sidebar.markdown("""
