@@ -20,8 +20,8 @@ import joblib
 from pathlib import Path
 import sys
 
-# Add src to path
-sys.path.append(str(Path(__file__).parent))
+# Add src to path for config import
+sys.path.insert(0, str(Path(__file__).parent / 'src'))
 import config
 
 # Page configuration
@@ -929,6 +929,1146 @@ def page_customer_risk_scoring():
         """, unsafe_allow_html=True)
 
 
+def page_feature_importance():
+    """Page 4: Feature Importance & Explainability."""
+    st.markdown('<h1 class="main-header">🔍 Feature Importance & Explainability</h1>', unsafe_allow_html=True)
+
+    # Load artifacts
+    model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
+
+    if model is None:
+        st.warning("⚠️ Model not found. Please train the model first.")
+        return
+
+    # Section 1: Global Feature Importance
+    st.markdown("## 📊 Global Feature Importance")
+    st.markdown("Understanding which features have the biggest impact on churn predictions across all customers.")
+
+    try:
+        feature_importance_df = pd.read_csv(config.REPORTS_DIR / 'shap_feature_importance.csv')
+
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            # Top 15 features bar chart
+            top_n = st.slider("Number of top features to display", 5, 20, 15)
+            top_features = feature_importance_df.head(top_n)
+
+            fig = go.Figure(go.Bar(
+                x=top_features['importance'],
+                y=top_features['feature'],
+                orientation='h',
+                marker=dict(
+                    color=top_features['importance'],
+                    colorscale='Viridis',
+                    showscale=True,
+                    colorbar=dict(title="Importance")
+                ),
+                text=[f"{val:.4f}" for val in top_features['importance']],
+                textposition='outside',
+                hovertemplate='<b>%{y}</b><br>Importance: %{x:.4f}<extra></extra>'
+            ))
+
+            fig.update_layout(
+                title=f"Top {top_n} Most Important Features",
+                xaxis_title="Mean Absolute SHAP Value",
+                yaxis_title="",
+                height=max(400, top_n * 25),
+                template=config.PLOTLY_TEMPLATE,
+                yaxis={'categoryorder': 'total ascending'}
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.markdown("### 🎯 Key Insights")
+
+            # Display top 5 features
+            st.markdown("**Top 5 Churn Drivers:**")
+            for idx, row in feature_importance_df.head(5).iterrows():
+                st.markdown(f"{idx+1}. **{row['feature']}** ({row['importance']:.4f})")
+
+            st.markdown("---")
+            st.markdown("**💡 Interpretation:**")
+            st.info(
+                "Higher SHAP values indicate stronger influence on predictions. "
+                "These features are most critical for identifying at-risk customers."
+            )
+
+    except Exception as e:
+        st.warning("⚠️ SHAP feature importance not available. Using model feature importances.")
+
+        # Fallback to model's feature_importances_ if available
+        if hasattr(model, 'feature_importances_'):
+            test_data = load_test_data()
+            if test_data is not None:
+                X_test = test_data.drop(config.TARGET_COLUMN, axis=1)
+                importances = model.feature_importances_
+                feature_imp_df = pd.DataFrame({
+                    'feature': X_test.columns,
+                    'importance': importances
+                }).sort_values('importance', ascending=False)
+
+                top_n = 15
+                top_features = feature_imp_df.head(top_n)
+
+                fig = go.Figure(go.Bar(
+                    x=top_features['importance'],
+                    y=top_features['feature'],
+                    orientation='h',
+                    marker=dict(color='steelblue')
+                ))
+
+                fig.update_layout(
+                    title=f"Top {top_n} Most Important Features",
+                    xaxis_title="Feature Importance",
+                    yaxis_title="",
+                    height=500,
+                    template=config.PLOTLY_TEMPLATE,
+                    yaxis={'categoryorder': 'total ascending'}
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+    # Section 6: Interactive Feature Explorer
+    st.markdown("---")
+    st.markdown("## 🔬 Interactive Feature Explorer")
+    st.markdown("Explore how individual features relate to customer churn.")
+
+    test_data = load_test_data()
+    if test_data is not None:
+        X_test = test_data.drop(config.TARGET_COLUMN, axis=1)
+        y_test = test_data[config.TARGET_COLUMN]
+
+        # Combine for analysis
+        analysis_df = X_test.copy()
+        analysis_df['Churn'] = y_test
+
+        # Feature selector
+        selected_feature = st.selectbox(
+            "Select a feature to explore:",
+            options=sorted(X_test.columns.tolist())
+        )
+
+        if selected_feature:
+            col1, col2 = st.columns([2, 1])
+
+            with col1:
+                # Determine if feature is numerical or categorical
+                is_numerical = pd.api.types.is_numeric_dtype(analysis_df[selected_feature])
+
+                if is_numerical:
+                    # Histogram with churn overlay
+                    fig = go.Figure()
+
+                    # Not churned
+                    fig.add_trace(go.Histogram(
+                        x=analysis_df[analysis_df['Churn'] == 0][selected_feature],
+                        name='Not Churned',
+                        marker_color='steelblue',
+                        opacity=0.7,
+                        nbinsx=30
+                    ))
+
+                    # Churned
+                    fig.add_trace(go.Histogram(
+                        x=analysis_df[analysis_df['Churn'] == 1][selected_feature],
+                        name='Churned',
+                        marker_color='indianred',
+                        opacity=0.7,
+                        nbinsx=30
+                    ))
+
+                    fig.update_layout(
+                        title=f"Distribution of {selected_feature} by Churn Status",
+                        xaxis_title=selected_feature,
+                        yaxis_title="Count",
+                        barmode='overlay',
+                        height=400,
+                        template=config.PLOTLY_TEMPLATE,
+                        hovermode='x unified'
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                else:
+                    # Bar chart for categorical
+                    churn_counts = analysis_df.groupby([selected_feature, 'Churn']).size().unstack(fill_value=0)
+
+                    fig = go.Figure()
+
+                    fig.add_trace(go.Bar(
+                        x=churn_counts.index,
+                        y=churn_counts[0],
+                        name='Not Churned',
+                        marker_color='steelblue'
+                    ))
+
+                    fig.add_trace(go.Bar(
+                        x=churn_counts.index,
+                        y=churn_counts[1],
+                        name='Churned',
+                        marker_color='indianred'
+                    ))
+
+                    fig.update_layout(
+                        title=f"Distribution of {selected_feature} by Churn Status",
+                        xaxis_title=selected_feature,
+                        yaxis_title="Count",
+                        barmode='group',
+                        height=400,
+                        template=config.PLOTLY_TEMPLATE
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                st.markdown("### 📈 Statistics")
+
+                if is_numerical:
+                    # Stats for numerical
+                    not_churned_stats = analysis_df[analysis_df['Churn'] == 0][selected_feature]
+                    churned_stats = analysis_df[analysis_df['Churn'] == 1][selected_feature]
+
+                    stats_df = pd.DataFrame({
+                        'Metric': ['Mean', 'Median', 'Std Dev', 'Min', 'Max'],
+                        'Not Churned': [
+                            f"{not_churned_stats.mean():.2f}",
+                            f"{not_churned_stats.median():.2f}",
+                            f"{not_churned_stats.std():.2f}",
+                            f"{not_churned_stats.min():.2f}",
+                            f"{not_churned_stats.max():.2f}"
+                        ],
+                        'Churned': [
+                            f"{churned_stats.mean():.2f}",
+                            f"{churned_stats.median():.2f}",
+                            f"{churned_stats.std():.2f}",
+                            f"{churned_stats.min():.2f}",
+                            f"{churned_stats.max():.2f}"
+                        ]
+                    })
+
+                    st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+                else:
+                    # Percentage breakdown for categorical
+                    total_not_churned = (analysis_df['Churn'] == 0).sum()
+                    total_churned = (analysis_df['Churn'] == 1).sum()
+
+                    category_stats = []
+                    for category in analysis_df[selected_feature].unique():
+                        not_churned_count = ((analysis_df[selected_feature] == category) & (analysis_df['Churn'] == 0)).sum()
+                        churned_count = ((analysis_df[selected_feature] == category) & (analysis_df['Churn'] == 1)).sum()
+
+                        category_stats.append({
+                            'Category': category,
+                            'Not Churned %': f"{(not_churned_count / total_not_churned * 100):.1f}%",
+                            'Churned %': f"{(churned_count / total_churned * 100):.1f}%"
+                        })
+
+                    stats_df = pd.DataFrame(category_stats)
+                    st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+                # SHAP impact if available
+                try:
+                    feature_importance_df = pd.read_csv(config.REPORTS_DIR / 'shap_feature_importance.csv')
+                    shap_value = feature_importance_df[feature_importance_df['feature'] == selected_feature]['importance'].values
+
+                    if len(shap_value) > 0:
+                        st.markdown("---")
+                        st.metric("Avg SHAP Impact", f"{shap_value[0]:.4f}")
+                except:
+                    pass
+
+    # Section 7: Individual Prediction Explanation
+    st.markdown("---")
+    st.markdown("## 🎯 Individual Prediction Explanation")
+    st.markdown("Deep dive into why the model makes specific predictions for individual customers.")
+
+    if test_data is not None:
+        customer_idx = st.number_input(
+            "Select Customer ID (0 to {})".format(len(X_test) - 1),
+            min_value=0,
+            max_value=len(X_test) - 1,
+            value=0,
+            key="feature_importance_customer_idx"
+        )
+
+        customer_data = X_test.iloc[customer_idx:customer_idx+1]
+        actual_churn = y_test.iloc[customer_idx]
+
+        # Make prediction
+        prediction_proba = model.predict_proba(customer_data)[0]
+        churn_probability = prediction_proba[1]
+
+        # Display customer details
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Customer ID", customer_idx)
+            st.metric("Churn Probability", f"{churn_probability:.1%}")
+
+        with col2:
+            prediction = "CHURN" if churn_probability >= 0.5 else "NO CHURN"
+            actual_label = "CHURN" if actual_churn == 1 else "NO CHURN"
+            st.metric("Prediction", prediction)
+            st.metric("Actual Status", actual_label)
+
+        with col3:
+            correct = "✓ Correct" if (prediction == actual_label) else "✗ Incorrect"
+            st.metric("Accuracy", correct)
+
+        # SHAP waterfall plot
+        if shap_data is not None:
+            st.markdown("### 📊 SHAP Waterfall Chart")
+            st.markdown("*Shows how each feature contributes to the prediction*")
+
+            try:
+                explainer = shap_data['explainer']
+                customer_shap = explainer.shap_values(customer_data)
+
+                if isinstance(customer_shap, list):
+                    customer_shap = customer_shap[1]
+
+                fig, ax = plt.subplots(figsize=(12, 8))
+
+                expected_value = explainer.expected_value
+                if isinstance(expected_value, (list, np.ndarray)):
+                    expected_value = expected_value[1]
+
+                shap_exp = shap.Explanation(
+                    values=customer_shap[0],
+                    base_values=expected_value,
+                    data=customer_data.iloc[0].values,
+                    feature_names=customer_data.columns.tolist()
+                )
+
+                shap.plots.waterfall(shap_exp, show=False)
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
+
+            except Exception as e:
+                st.info(f"Could not generate SHAP waterfall: {e}")
+
+        # Natural language explanation
+        st.markdown("### 📝 Plain English Explanation")
+
+        # Get top contributing features
+        if shap_data is not None:
+            try:
+                explainer = shap_data['explainer']
+                customer_shap = explainer.shap_values(customer_data)
+
+                if isinstance(customer_shap, list):
+                    customer_shap = customer_shap[1]
+
+                # Get feature contributions
+                feature_contributions = pd.DataFrame({
+                    'feature': customer_data.columns,
+                    'value': customer_data.iloc[0].values,
+                    'shap_value': customer_shap[0]
+                }).sort_values('shap_value', key=abs, ascending=False)
+
+                avg_churn_rate = y_test.mean() * 100
+
+                explanation = f"""
+**Customer #{customer_idx} Analysis:**
+
+The model predicts a **{churn_probability:.1%}** churn probability for this customer,
+which is {'higher' if churn_probability > avg_churn_rate/100 else 'lower'} than the
+average churn rate of {avg_churn_rate:.1f}%.
+
+**Key Contributing Factors:**
+"""
+
+                # Top 3 positive contributors
+                positive_contributors = feature_contributions[feature_contributions['shap_value'] > 0].head(3)
+                if len(positive_contributors) > 0:
+                    explanation += "\n**Increasing Churn Risk:**\n"
+                    for _, row in positive_contributors.iterrows():
+                        explanation += f"- **{row['feature']}** (value: {row['value']:.2f if isinstance(row['value'], (int, float)) else row['value']}) contributes +{row['shap_value']:.3f} to churn risk\n"
+
+                # Top 3 negative contributors
+                negative_contributors = feature_contributions[feature_contributions['shap_value'] < 0].head(3)
+                if len(negative_contributors) > 0:
+                    explanation += "\n**Decreasing Churn Risk:**\n"
+                    for _, row in negative_contributors.iterrows():
+                        explanation += f"- **{row['feature']}** (value: {row['value']:.2f if isinstance(row['value'], (int, float)) else row['value']}) reduces churn risk by {abs(row['shap_value']):.3f}\n"
+
+                # Recommendation
+                explanation += "\n**Recommended Action:**\n"
+                if churn_probability >= 0.7:
+                    top_feature = positive_contributors.iloc[0]['feature']
+                    explanation += f"🚨 **URGENT**: This customer is high risk. Focus on addressing **{top_feature}** immediately through targeted retention offers."
+                elif churn_probability >= 0.4:
+                    explanation += "⚠️ **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
+                else:
+                    explanation += "✅ **MAINTAIN**: Continue standard customer service protocols."
+
+                st.markdown(explanation)
+
+            except Exception as e:
+                st.info(f"Natural language explanation not available: {e}")
+
+    # Section 8: Feature Correlations
+    st.markdown("---")
+    st.markdown("## 🔗 Feature Correlations")
+    st.markdown("Understanding relationships between features.")
+
+    if test_data is not None:
+        # Select only numerical features for correlation
+        numerical_cols = X_test.select_dtypes(include=[np.number]).columns.tolist()
+
+        if len(numerical_cols) > 0:
+            # Limit to top features for readability
+            top_features_for_corr = numerical_cols[:min(15, len(numerical_cols))]
+
+            corr_matrix = X_test[top_features_for_corr].corr()
+
+            fig = go.Figure(data=go.Heatmap(
+                z=corr_matrix.values,
+                x=corr_matrix.columns,
+                y=corr_matrix.columns,
+                colorscale='RdBu',
+                zmid=0,
+                text=np.round(corr_matrix.values, 2),
+                texttemplate='%{text}',
+                textfont={"size": 10},
+                colorbar=dict(title="Correlation")
+            ))
+
+            fig.update_layout(
+                title="Feature Correlation Heatmap",
+                height=600,
+                template=config.PLOTLY_TEMPLATE
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.info("**Interpretation:** Red indicates positive correlation, blue indicates negative correlation. Values range from -1 to +1.")
+
+    # Section 9: Technical Notes
+    with st.expander("📚 How Feature Importance Works"):
+        st.markdown("""
+        ### SHAP (SHapley Additive exPlanations)
+
+        **What is SHAP?**
+        SHAP values explain the contribution of each feature to a model's prediction by assigning
+        each feature an importance value for a particular prediction. The method is based on
+        Shapley values from cooperative game theory.
+
+        **How to Interpret SHAP Values:**
+        - **Positive SHAP value**: Feature increases the probability of churn
+        - **Negative SHAP value**: Feature decreases the probability of churn
+        - **Magnitude**: Larger absolute values indicate stronger impact
+
+        **Advantages:**
+        - ✅ Model-agnostic (works with any ML model)
+        - ✅ Provides both global and local explanations
+        - ✅ Consistent and locally accurate
+        - ✅ Based on solid game theory foundations
+
+        **Limitations:**
+        - ⚠️ Computationally expensive for large datasets
+        - ⚠️ Requires careful interpretation with correlated features
+        - ⚠️ Explanations are relative to the model, not ground truth
+
+        **Learn More:**
+        - [SHAP Documentation](https://shap.readthedocs.io/)
+        - [Original Paper](https://arxiv.org/abs/1705.07874)
+        - [Interpretable ML Book](https://christophm.github.io/interpretable-ml-book/shap.html)
+        """)
+
+
+def page_ab_test_simulator():
+    """Page 5: A/B Test Simulator."""
+    st.markdown('<h1 class="main-header">🧪 A/B Test Simulator</h1>', unsafe_allow_html=True)
+
+    st.markdown("""
+    Simulate the impact of retention campaigns and validate improvements with statistical rigor.
+    This tool helps you design experiments and calculate required sample sizes for reliable results.
+    """)
+
+    # Section 1: ROI Calculator
+    st.markdown("## 💰 Retention Campaign ROI Calculator")
+    st.markdown("Calculate the expected return on investment for your retention initiatives.")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("### 📊 Current Metrics")
+        current_churn_rate = st.slider("Current Churn Rate (%)", 0.0, 50.0, 26.5, 0.5)
+        total_customers = st.number_input("Total Customers", 1000, 1000000, 10000, 1000)
+        avg_customer_value = st.number_input("Avg Customer Lifetime Value ($)", 100, 10000, 2000, 100)
+
+    with col2:
+        st.markdown("### 🎯 Campaign Parameters")
+        expected_reduction = st.slider("Expected Churn Reduction (%)", 1.0, 50.0, 15.0, 1.0)
+        campaign_cost_per_customer = st.number_input("Cost per Customer ($)", 10, 500, 100, 10)
+        target_percentage = st.slider("% of Customers Targeted", 10.0, 100.0, 30.0, 5.0)
+
+    with col3:
+        st.markdown("### 🔮 Projected Results")
+
+        # Calculations
+        customers_targeted = int(total_customers * target_percentage / 100)
+        current_churned = int(total_customers * current_churn_rate / 100)
+        new_churn_rate = current_churn_rate * (1 - expected_reduction / 100)
+        new_churned = int(total_customers * new_churn_rate / 100)
+        customers_saved = current_churned - new_churned
+
+        total_campaign_cost = customers_targeted * campaign_cost_per_customer
+        revenue_saved = customers_saved * avg_customer_value
+        net_benefit = revenue_saved - total_campaign_cost
+        roi_percentage = (net_benefit / total_campaign_cost * 100) if total_campaign_cost > 0 else 0
+
+        st.metric("Customers Saved", f"{customers_saved:,}")
+        st.metric("Total Campaign Cost", f"${total_campaign_cost:,}")
+        st.metric("Revenue Saved", f"${revenue_saved:,}")
+        st.metric("Net Benefit", f"${net_benefit:,}", f"{roi_percentage:.0f}% ROI")
+
+    # Visualization
+    st.markdown("### 📈 Campaign Impact Visualization")
+
+    scenarios = pd.DataFrame({
+        'Scenario': ['Current State', 'After Campaign'],
+        'Churned Customers': [current_churned, new_churned],
+        'Retained Customers': [total_customers - current_churned, total_customers - new_churned]
+    })
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        name='Retained',
+        x=scenarios['Scenario'],
+        y=scenarios['Retained Customers'],
+        marker_color='steelblue',
+        text=scenarios['Retained Customers'],
+        textposition='inside'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Churned',
+        x=scenarios['Scenario'],
+        y=scenarios['Churned Customers'],
+        marker_color='indianred',
+        text=scenarios['Churned Customers'],
+        textposition='inside'
+    ))
+
+    fig.update_layout(
+        barmode='stack',
+        title="Customer Retention: Current vs. After Campaign",
+        yaxis_title="Number of Customers",
+        height=400,
+        template=config.PLOTLY_TEMPLATE
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Financial breakdown
+    st.markdown("### 💵 Financial Breakdown")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Costs:**")
+        costs_df = pd.DataFrame({
+            'Item': ['Campaign Execution', 'Target Customers', 'Cost per Customer'],
+            'Value': [f"${total_campaign_cost:,}", f"{customers_targeted:,}", f"${campaign_cost_per_customer}"]
+        })
+        st.dataframe(costs_df, use_container_width=True, hide_index=True)
+
+    with col2:
+        st.markdown("**Benefits:**")
+        benefits_df = pd.DataFrame({
+            'Item': ['Customers Saved', 'Value per Customer', 'Total Revenue Saved'],
+            'Value': [f"{customers_saved:,}", f"${avg_customer_value:,}", f"${revenue_saved:,}"]
+        })
+        st.dataframe(benefits_df, use_container_width=True, hide_index=True)
+
+    # Section 2: A/B Test Design
+    st.markdown("---")
+    st.markdown("## 🔬 A/B Test Design & Sample Size Calculator")
+    st.markdown("Design statistically rigorous experiments to validate retention strategies.")
+
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.markdown("### ⚙️ Test Parameters")
+
+        baseline_conversion = st.slider("Baseline Retention Rate (%)", 50.0, 95.0, 73.5, 0.5,
+                                       help="Current retention rate (100% - churn rate)")
+        minimum_detectable_effect = st.slider("Minimum Detectable Effect (%)", 1.0, 20.0, 5.0, 0.5,
+                                             help="Smallest improvement you want to detect")
+        significance_level = st.selectbox("Significance Level (α)", [0.01, 0.05, 0.10], index=1,
+                                         help="Probability of false positive (Type I error)")
+        statistical_power = st.selectbox("Statistical Power (1-β)", [0.80, 0.85, 0.90, 0.95], index=2,
+                                        help="Probability of detecting true effect")
+
+        # Sample size calculation (simplified formula)
+        from scipy import stats
+
+        p1 = baseline_conversion / 100
+        p2 = p1 + (minimum_detectable_effect / 100)
+
+        # Z-scores
+        z_alpha = stats.norm.ppf(1 - significance_level / 2)
+        z_beta = stats.norm.ppf(statistical_power)
+
+        # Pooled proportion
+        p_pooled = (p1 + p2) / 2
+
+        # Sample size per group
+        n = ((z_alpha * np.sqrt(2 * p_pooled * (1 - p_pooled)) +
+              z_beta * np.sqrt(p1 * (1 - p1) + p2 * (1 - p2))) ** 2) / ((p2 - p1) ** 2)
+
+        sample_size_per_group = int(np.ceil(n))
+        total_sample_size = sample_size_per_group * 2
+
+        st.markdown("### 📊 Required Sample Size")
+        st.metric("Per Group", f"{sample_size_per_group:,}")
+        st.metric("Total (Both Groups)", f"{total_sample_size:,}")
+
+        # Test duration estimate
+        if total_customers > 0:
+            weeks_needed = np.ceil(total_sample_size / total_customers * 52)
+            st.metric("Estimated Test Duration", f"{int(weeks_needed)} weeks")
+
+    with col2:
+        st.markdown("### 📈 Simulated Results")
+
+        # Generate synthetic test results
+        np.random.seed(42)
+
+        # Control group
+        control_retention = np.random.binomial(1, p1, sample_size_per_group)
+        control_rate = control_retention.mean()
+
+        # Treatment group
+        treatment_retention = np.random.binomial(1, p2, sample_size_per_group)
+        treatment_rate = treatment_retention.mean()
+
+        # Calculate improvement
+        absolute_improvement = (treatment_rate - control_rate) * 100
+        relative_improvement = ((treatment_rate - control_rate) / control_rate) * 100
+
+        # Statistical test
+        from scipy.stats import chi2_contingency
+
+        contingency_table = np.array([
+            [control_retention.sum(), len(control_retention) - control_retention.sum()],
+            [treatment_retention.sum(), len(treatment_retention) - treatment_retention.sum()]
+        ])
+
+        chi2, p_value, dof, expected = chi2_contingency(contingency_table)
+
+        st.metric("Control Group Retention", f"{control_rate:.1%}")
+        st.metric("Treatment Group Retention", f"{treatment_rate:.1%}")
+        st.metric("Absolute Improvement", f"{absolute_improvement:.2f}%")
+        st.metric("Relative Improvement", f"{relative_improvement:.1f}%")
+
+        st.markdown("---")
+        st.markdown("### 🎯 Statistical Significance")
+
+        if p_value < significance_level:
+            st.success(f"✅ **SIGNIFICANT** (p-value: {p_value:.4f})")
+            st.markdown("The treatment shows a statistically significant improvement!")
+        else:
+            st.warning(f"⚠️ **NOT SIGNIFICANT** (p-value: {p_value:.4f})")
+            st.markdown("No statistically significant difference detected. Consider running the test longer.")
+
+    # Visualization of results
+    st.markdown("### 📊 Test Results Comparison")
+
+    results_df = pd.DataFrame({
+        'Group': ['Control', 'Treatment'],
+        'Retention Rate': [control_rate * 100, treatment_rate * 100],
+        'Sample Size': [sample_size_per_group, sample_size_per_group]
+    })
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=results_df['Group'],
+        y=results_df['Retention Rate'],
+        text=[f"{val:.1f}%" for val in results_df['Retention Rate']],
+        textposition='outside',
+        marker_color=['steelblue', 'forestgreen']
+    ))
+
+    fig.update_layout(
+        title="A/B Test Results: Retention Rate Comparison",
+        yaxis_title="Retention Rate (%)",
+        height=400,
+        template=config.PLOTLY_TEMPLATE
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Interpretation guide
+    with st.expander("📚 How to Interpret A/B Test Results"):
+        st.markdown("""
+        ### Understanding Statistical Significance
+
+        **P-Value:**
+        - Probability that the observed difference occurred by chance
+        - Lower p-value = stronger evidence of real effect
+        - Typical threshold: p < 0.05 (5% chance of false positive)
+
+        **Statistical Power:**
+        - Probability of detecting a true effect
+        - Higher power = less risk of missing real improvements
+        - Typical target: 80% or higher
+
+        **Sample Size:**
+        - More samples = more reliable results
+        - Too small: May miss real effects (Type II error)
+        - Too large: Wastes resources
+
+        **Best Practices:**
+        1. ✅ Define success metrics BEFORE running test
+        2. ✅ Run test for full duration (avoid peeking)
+        3. ✅ Ensure random assignment to groups
+        4. ✅ Check for seasonality effects
+        5. ✅ Validate results with holdout group
+
+        **Common Pitfalls:**
+        - ❌ Stopping test early when "significant"
+        - ❌ Running multiple tests without correction
+        - ❌ Changing success metrics mid-test
+        - ❌ Ignoring practical significance
+        """)
+
+
+def page_about_data():
+    """Page 6: About the Data."""
+    st.markdown('<h1 class="main-header">📚 About the Data</h1>', unsafe_allow_html=True)
+
+    # Section 1: Dataset Overview
+    st.markdown("## 📊 Dataset Overview")
+
+    # Load data
+    test_data = load_test_data()
+
+    try:
+        # Try to load full dataset
+        full_data = pd.read_csv(config.DATA_DIR / 'processed' / 'processed_data.csv')
+    except:
+        # Fall back to test data
+        full_data = test_data
+
+    if full_data is not None:
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Total Records", f"{len(full_data):,}")
+
+        with col2:
+            st.metric("Number of Features", len(full_data.columns) - 1)  # Exclude target
+
+        with col3:
+            churn_rate = full_data['Churn'].mean() * 100 if 'Churn' in full_data.columns else 26.5
+            st.metric("Churn Rate", f"{churn_rate:.1f}%")
+
+        with col4:
+            completeness = (1 - full_data.isnull().sum().sum() / (full_data.shape[0] * full_data.shape[1])) * 100
+            st.metric("Data Completeness", f"{completeness:.1f}%")
+
+    st.markdown("---")
+
+    # Dataset info
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.markdown("### 📋 Dataset Information")
+        st.markdown("""
+        - **Dataset Name:** Telco Customer Churn Dataset
+        - **Source:** IBM Sample Data / Kaggle
+        - **Domain:** Telecommunications
+        - **Target Variable:** Churn (Binary: 0 = Retained, 1 = Churned)
+        - **Use Case:** Customer retention and churn prediction
+        """)
+
+    with col2:
+        st.markdown("### 🎯 Business Context")
+        st.markdown("""
+        This dataset contains customer information from a telecom company, including:
+        - Demographics (age, gender, dependents)
+        - Account information (tenure, contract, billing)
+        - Services subscribed (internet, phone, streaming)
+        - Churn status (whether customer left)
+        """)
+
+    # Section 2: Feature Dictionary
+    st.markdown("---")
+    st.markdown("## 📖 Feature Dictionary")
+    st.markdown("Comprehensive description of all features in the dataset.")
+
+    # Create feature dictionary
+    feature_dict = {
+        'Feature Name': [
+            'gender', 'SeniorCitizen', 'Partner', 'Dependents', 'tenure',
+            'PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity',
+            'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV',
+            'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod',
+            'MonthlyCharges', 'TotalCharges', 'Churn'
+        ],
+        'Data Type': [
+            'Categorical', 'Binary', 'Binary', 'Binary', 'Numerical',
+            'Binary', 'Categorical', 'Categorical', 'Categorical',
+            'Categorical', 'Categorical', 'Categorical', 'Categorical',
+            'Categorical', 'Categorical', 'Binary', 'Categorical',
+            'Numerical', 'Numerical', 'Binary (Target)'
+        ],
+        'Description': [
+            'Customer gender',
+            'Whether customer is senior citizen (65+)',
+            'Whether customer has a partner',
+            'Whether customer has dependents',
+            'Number of months as customer',
+            'Has phone service',
+            'Has multiple phone lines',
+            'Internet service type',
+            'Has online security add-on',
+            'Has online backup add-on',
+            'Has device protection add-on',
+            'Has tech support add-on',
+            'Has streaming TV service',
+            'Has streaming movies service',
+            'Contract type',
+            'Enrolled in paperless billing',
+            'Payment method',
+            'Monthly bill amount',
+            'Total amount billed to date',
+            'Whether customer churned'
+        ],
+        'Example Values': [
+            'Male, Female',
+            '0, 1',
+            'Yes, No',
+            'Yes, No',
+            '1-72 months',
+            'Yes, No',
+            'Yes, No, No phone',
+            'DSL, Fiber optic, No',
+            'Yes, No, No internet',
+            'Yes, No, No internet',
+            'Yes, No, No internet',
+            'Yes, No, No internet',
+            'Yes, No, No internet',
+            'Yes, No, No internet',
+            'Month-to-month, One year, Two year',
+            'Yes, No',
+            'Electronic check, Mailed check, Bank transfer, Credit card',
+            '$18.25 - $118.75',
+            '$18.80 - $8684.80',
+            'Yes (1), No (0)'
+        ]
+    }
+
+    feature_dict_df = pd.DataFrame(feature_dict)
+
+    st.dataframe(
+        feature_dict_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Feature Name": st.column_config.TextColumn("Feature Name", width="medium"),
+            "Data Type": st.column_config.TextColumn("Data Type", width="small"),
+            "Description": st.column_config.TextColumn("Description", width="large"),
+            "Example Values": st.column_config.TextColumn("Example Values", width="large")
+        }
+    )
+
+    # Section 3: Data Quality Summary
+    st.markdown("---")
+    st.markdown("## ✅ Data Quality Summary")
+
+    if full_data is not None:
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            st.markdown("### Missing Values Analysis")
+
+            missing_counts = full_data.isnull().sum()
+            missing_pct = (missing_counts / len(full_data) * 100).round(2)
+
+            if missing_counts.sum() == 0:
+                st.success("✅ No missing values detected in the dataset!")
+            else:
+                missing_df = pd.DataFrame({
+                    'Feature': missing_counts.index,
+                    'Missing Count': missing_counts.values,
+                    'Missing %': missing_pct.values
+                }).query('`Missing Count` > 0')
+
+                if len(missing_df) > 0:
+                    st.dataframe(missing_df, use_container_width=True, hide_index=True)
+                else:
+                    st.success("✅ No missing values!")
+
+        with col2:
+            st.markdown("### Data Type Distribution")
+
+            # Count feature types
+            numerical_features = full_data.select_dtypes(include=[np.number]).columns.tolist()
+            if 'Churn' in numerical_features:
+                numerical_features.remove('Churn')
+
+            categorical_features = full_data.select_dtypes(include=['object']).columns.tolist()
+
+            type_counts = pd.DataFrame({
+                'Type': ['Numerical', 'Categorical', 'Target'],
+                'Count': [len(numerical_features), len(categorical_features), 1]
+            })
+
+            fig = go.Figure(data=[go.Pie(
+                labels=type_counts['Type'],
+                values=type_counts['Count'],
+                hole=0.4,
+                marker=dict(colors=['steelblue', 'forestgreen', 'indianred'])
+            )])
+
+            fig.update_layout(
+                title="Feature Types Distribution",
+                height=300,
+                template=config.PLOTLY_TEMPLATE
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Section 4: Key Statistics
+    st.markdown("---")
+    st.markdown("## 📈 Key Statistics")
+
+    if full_data is not None:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 👥 Customer Demographics")
+
+            stats = []
+
+            # Gender split if available
+            if 'gender' in full_data.columns:
+                gender_counts = full_data['gender'].value_counts()
+                male_pct = gender_counts.get('Male', 0) / len(full_data) * 100
+                female_pct = gender_counts.get('Female', 0) / len(full_data) * 100
+                stats.append(('Gender Split', f'M: {male_pct:.1f}% / F: {female_pct:.1f}%'))
+
+            # Senior citizens
+            if 'SeniorCitizen' in full_data.columns:
+                senior_pct = full_data['SeniorCitizen'].mean() * 100
+                stats.append(('Senior Citizens', f'{senior_pct:.1f}%'))
+
+            # Partner
+            if 'Partner' in full_data.columns:
+                partner_pct = (full_data['Partner'] == 'Yes').sum() / len(full_data) * 100
+                stats.append(('Has Partner', f'{partner_pct:.1f}%'))
+
+            # Dependents
+            if 'Dependents' in full_data.columns:
+                dep_pct = (full_data['Dependents'] == 'Yes').sum() / len(full_data) * 100
+                stats.append(('Has Dependents', f'{dep_pct:.1f}%'))
+
+            stats_df = pd.DataFrame(stats, columns=['Metric', 'Value'])
+            st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.markdown("### 📊 Service Usage")
+
+            usage_stats = []
+
+            # Tenure
+            if 'tenure' in full_data.columns:
+                avg_tenure = full_data['tenure'].mean()
+                usage_stats.append(('Average Tenure', f'{avg_tenure:.1f} months'))
+
+            # Monthly charges
+            if 'MonthlyCharges' in full_data.columns:
+                median_charges = full_data['MonthlyCharges'].median()
+                usage_stats.append(('Median Monthly Charges', f'${median_charges:.2f}'))
+
+            # Contract type
+            if 'Contract' in full_data.columns:
+                most_common_contract = full_data['Contract'].mode()[0]
+                contract_pct = (full_data['Contract'] == most_common_contract).sum() / len(full_data) * 100
+                usage_stats.append(('Most Common Contract', f'{most_common_contract} ({contract_pct:.1f}%)'))
+
+            # Internet service
+            if 'InternetService' in full_data.columns:
+                internet_pct = (full_data['InternetService'] != 'No').sum() / len(full_data) * 100
+                usage_stats.append(('Internet Service Adoption', f'{internet_pct:.1f}%'))
+
+            usage_df = pd.DataFrame(usage_stats, columns=['Metric', 'Value'])
+            st.dataframe(usage_df, use_container_width=True, hide_index=True)
+
+    # Section 5: Class Balance Visualization
+    st.markdown("---")
+    st.markdown("## ⚖️ Target Variable Distribution")
+
+    if full_data is not None and 'Churn' in full_data.columns:
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            churn_counts = full_data['Churn'].value_counts()
+
+            fig = go.Figure(data=[go.Pie(
+                labels=['Not Churned', 'Churned'],
+                values=[churn_counts.get(0, 0), churn_counts.get(1, 0)],
+                hole=0.4,
+                marker=dict(colors=['steelblue', 'indianred']),
+                text=[f"{churn_counts.get(0, 0):,}", f"{churn_counts.get(1, 0):,}"],
+                textposition='inside'
+            )])
+
+            fig.update_layout(
+                title="Churn Distribution",
+                height=400,
+                template=config.PLOTLY_TEMPLATE
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            churn_rate = full_data['Churn'].mean() * 100
+            not_churn_rate = 100 - churn_rate
+
+            fig = go.Figure(data=[go.Bar(
+                x=['Not Churned', 'Churned'],
+                y=[not_churn_rate, churn_rate],
+                text=[f'{not_churn_rate:.1f}%', f'{churn_rate:.1f}%'],
+                textposition='outside',
+                marker_color=['steelblue', 'indianred']
+            )])
+
+            fig.update_layout(
+                title="Churn Rate (%)",
+                yaxis_title="Percentage",
+                height=400,
+                template=config.PLOTLY_TEMPLATE
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        if churn_rate < 40:
+            st.info(f"ℹ️ The dataset shows a {churn_rate:.1f}% churn rate, which is typical for telecom industry benchmarks (15-35%).")
+        else:
+            st.warning(f"⚠️ The dataset shows a {churn_rate:.1f}% churn rate, which is higher than typical industry averages.")
+
+    # Section 6: Download Options
+    st.markdown("---")
+    st.markdown("## 💾 Download Options")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if full_data is not None:
+            sample_data = full_data.head(100).to_csv(index=False)
+            st.download_button(
+                label="📥 Download Sample Data (100 rows)",
+                data=sample_data,
+                file_name="churn_sample_data.csv",
+                mime="text/csv"
+            )
+
+    with col2:
+        feature_dict_csv = feature_dict_df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Feature Dictionary",
+            data=feature_dict_csv,
+            file_name="feature_dictionary.csv",
+            mime="text/csv"
+        )
+
+    with col3:
+        st.markdown("**Full Dataset:**")
+        st.info("Contact data owner for full dataset access")
+
+    # Section 8: Data Collection & Ethics
+    st.markdown("---")
+    st.markdown("## 🔒 Data Privacy & Ethics")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### Data Privacy")
+        st.info("""
+        - ✅ Dataset contains anonymized customer information
+        - ✅ No personally identifiable information (PII) included
+        - ✅ Data handling follows industry best practices
+        - ✅ Customer IDs are randomized identifiers
+        """)
+
+    with col2:
+        st.markdown("### Ethical Considerations")
+        st.warning("""
+        - ⚠️ Model predictions should not be used for discriminatory purposes
+        - ⚠️ Human review recommended for high-stakes decisions
+        - ⚠️ Regular monitoring for bias across demographics required
+        - ⚠️ Use predictions to improve experience, not punish customers
+        """)
+
+    # Section 9: Limitations
+    st.markdown("---")
+    st.markdown("## ⚠️ Limitations & Responsible Use")
+
+    with st.expander("📋 Dataset Limitations"):
+        st.markdown("""
+        **Temporal Limitations:**
+        - Dataset represents a specific time period
+        - Market conditions may have changed since data collection
+        - Seasonal patterns may not be fully captured
+
+        **Feature Limitations:**
+        - External factors (competitors, economy) not included
+        - Customer satisfaction scores not available
+        - Social media sentiment not captured
+        - Network quality metrics missing
+
+        **Model Limitations:**
+        - Model performance may degrade over time (concept drift)
+        - Recommended retraining: Every 3-6 months
+        - Predictions are probabilities, not certainties
+        - Past behavior doesn't guarantee future outcomes
+
+        **Recommended Practices:**
+        - ✅ Combine model insights with business judgment
+        - ✅ Maintain transparency with customers about data usage
+        - ✅ Monitor model performance continuously
+        - ✅ Update model with fresh data regularly
+        - ✅ Use predictions to improve customer experience
+        """)
+
+    # Section 10: Data Lineage
+    with st.expander("📊 Data Lineage & Version History"):
+        st.markdown("""
+        ### Version Information
+        - **Version:** 1.0
+        - **Original Source:** IBM Sample Data / Kaggle
+        - **Last Updated:** 2024
+
+        ### Preprocessing Steps Applied:
+        1. ✅ Removed customerID from features (not predictive)
+        2. ✅ Handled missing values in TotalCharges (< 1%)
+        3. ✅ Encoded categorical variables (one-hot encoding)
+        4. ✅ Scaled numerical features (StandardScaler)
+        5. ✅ Split into train/test sets (80/20 stratified)
+        6. ✅ Applied SMOTE for class balance in training
+
+        ### Data Quality Checks:
+        - ✅ Duplicate records: None found
+        - ✅ Outliers: Identified and retained (valid business cases)
+        - ✅ Consistency: All features validated
+        - ✅ Completeness: 99.8% complete
+
+        ### Future Updates:
+        - Planned: Quarterly data refreshes
+        - Next Update: TBD based on data availability
+        """)
+
+
 # Main App
 def main():
     """Main application."""
@@ -940,7 +2080,8 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Select Page",
-        ["Executive Summary", "Model Performance", "Customer Risk Scoring"],
+        ["Executive Summary", "Model Performance", "Customer Risk Scoring",
+         "Feature Importance", "A/B Test Simulator", "About the Data"],
         label_visibility="collapsed"
     )
 
@@ -984,6 +2125,12 @@ def main():
         page_model_performance()
     elif page == "Customer Risk Scoring":
         page_customer_risk_scoring()
+    elif page == "Feature Importance":
+        page_feature_importance()
+    elif page == "A/B Test Simulator":
+        page_ab_test_simulator()
+    elif page == "About the Data":
+        page_about_data()
 
 
 if __name__ == "__main__":
