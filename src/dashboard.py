@@ -1567,7 +1567,48 @@ average churn rate of {avg_churn_rate:.1f}%.
                 st.error(f"Could not generate explanation: {str(e)}")
                 st.info("This may happen if SHAP values are not available for this model.")
         else:
-            st.info("SHAP explanations are not available. Please run the explainability pipeline to generate SHAP values.")
+            # Fallback: Use model feature importances when SHAP is not available
+            if hasattr(model, 'feature_importances_'):
+                avg_churn_rate = y_test.mean() * 100
+
+                explanation = f"""
+**Customer #{customer_idx} Analysis:**
+
+The model predicts a **{churn_probability:.1%}** churn probability for this customer,
+which is {'higher' if churn_probability > avg_churn_rate/100 else 'lower'} than the
+average churn rate of {avg_churn_rate:.1f}%.
+
+**Top Global Churn Drivers (from model):**
+
+Based on the overall model feature importances, the most important factors for predicting churn are:
+"""
+                # Get top 5 most important features
+                feature_importance_df = pd.DataFrame({
+                    'feature': customer_data.columns,
+                    'importance': model.feature_importances_
+                }).sort_values('importance', ascending=False).head(5)
+
+                for idx, row in feature_importance_df.iterrows():
+                    display_name = feature_name_mapping.get(row['feature'], row['feature'])
+                    customer_value = customer_data.iloc[0][row['feature']]
+                    if isinstance(customer_value, (int, float)):
+                        explanation += f"\n{idx+1}. **{display_name}** (customer value: {customer_value:.2f})"
+                    else:
+                        explanation += f"\n{idx+1}. **{display_name}** (customer value: {customer_value})"
+
+                explanation += "\n\n**Recommended Action:**\n"
+                if churn_probability >= 0.7:
+                    explanation += "🚨 **URGENT**: This customer is high risk. Implement immediate retention strategies."
+                elif churn_probability >= 0.4:
+                    explanation += "⚠️ **PROACTIVE**: Monitor this customer and consider preventive engagement strategies."
+                else:
+                    explanation += "✅ **MAINTAIN**: Continue standard customer service protocols."
+
+                explanation += "\n\n*Note: Detailed SHAP explanations are not available. This analysis uses overall feature importance patterns.*"
+
+                st.markdown(explanation)
+            else:
+                st.info("Individual customer explanations require model feature importances or SHAP values.")
 
     # Section 8: Feature Correlations
     st.markdown("---")
