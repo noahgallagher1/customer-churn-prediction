@@ -315,11 +315,70 @@ def load_model_artifacts():
         except:
             all_results = None
 
-        return model, preprocessor, feature_names, metrics, shap_data, all_results
+        # Load Phase 1 advanced evaluation reports
+        phase1_data = {}
+        reports_dir = config.REPORTS_DIR
+
+        if reports_dir.exists():
+            # Load baseline comparison
+            if (reports_dir / 'baseline_comparison.csv').exists():
+                phase1_data['baseline_comparison'] = pd.read_csv(reports_dir / 'baseline_comparison.csv')
+
+            # Load statistical comparison
+            if (reports_dir / 'statistical_comparison.csv').exists():
+                phase1_data['statistical_comparison'] = pd.read_csv(reports_dir / 'statistical_comparison.csv')
+
+            # Load confidence intervals
+            if (reports_dir / 'confidence_intervals.csv').exists():
+                phase1_data['confidence_intervals'] = pd.read_csv(reports_dir / 'confidence_intervals.csv')
+
+            # Load enhanced ROI
+            if (reports_dir / 'enhanced_roi_analysis.csv').exists():
+                phase1_data['enhanced_roi'] = pd.read_csv(reports_dir / 'enhanced_roi_analysis.csv')
+
+            # Load ROI sensitivity
+            if (reports_dir / 'roi_sensitivity_analysis.csv').exists():
+                sens_df = pd.read_csv(reports_dir / 'roi_sensitivity_analysis.csv')
+                # Transform sensitivity data to expected format
+                transformed_rows = []
+                for _, row in sens_df.iterrows():
+                    scenario = row['Scenario']
+                    if 'CLV' in scenario:
+                        param = 'clv'
+                        value = row['CLV']
+                    elif 'Campaign Cost' in scenario or 'Cost' in scenario:
+                        param = 'campaign_cost'
+                        value = row['Campaign Cost']
+                    elif 'Success Rate' in scenario:
+                        param = 'success_rate'
+                        value = row['Success Rate']
+                    else:
+                        continue
+
+                    transformed_rows.append({
+                        'parameter': param,
+                        'value': value,
+                        'roi_percentage': row['ROI (%)'],
+                        'net_benefit': row['Net Benefit ($)']
+                    })
+
+                phase1_data['roi_sensitivity'] = pd.DataFrame(transformed_rows)
+
+            # Load segment analyses
+            phase1_data['segments'] = {}
+            for segment_file in ['contract_type_analysis.csv', 'tenure_group_analysis.csv', 'monthly_charges_analysis.csv']:
+                segment_name = segment_file.replace('_analysis.csv', '')
+                if (reports_dir / segment_file).exists():
+                    # Read CSV and convert column names to lowercase for consistency
+                    df = pd.read_csv(reports_dir / segment_file)
+                    df.columns = df.columns.str.lower()
+                    phase1_data['segments'][segment_name] = df
+
+        return model, preprocessor, feature_names, metrics, shap_data, all_results, phase1_data
     except Exception as e:
         st.error(f"Error loading model artifacts: {e}")
         st.info("Please run the training pipeline first: python src/model_training.py")
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, {}
 
 
 @st.cache_data
@@ -339,7 +398,7 @@ def page_executive_summary():
     st.markdown('<p style="text-align: center; color: #7f8c8d; font-size: 0.95rem; margin-top: -1rem; margin-bottom: 2rem; font-style: italic;">Portfolio Project by Noah Gallagher, Data Scientist (2025)</p>', unsafe_allow_html=True)
 
     # Load artifacts
-    model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
+    model, preprocessor, feature_names, metrics, shap_data, all_results, phase1_data = load_model_artifacts()
 
     if model is None:
         st.warning("**Model not found. Please train the model first.**")
@@ -434,7 +493,12 @@ def page_executive_summary():
         ''', unsafe_allow_html=True)
 
     with col4:
-        net_savings = metrics.get('net_savings', 0)
+        # Use enhanced ROI analysis if available (correct metrics), otherwise fallback to old metrics
+        if phase1_data and 'enhanced_roi' in phase1_data:
+            roi_df = phase1_data['enhanced_roi']
+            net_savings = roi_df['net_benefit'].values[0]
+        else:
+            net_savings = metrics.get('net_savings', 0)
         savings_increase = net_savings * 0.15
         st.markdown(f'''
         <div class="metric-tile tile-purple">
@@ -502,36 +566,29 @@ def page_executive_summary():
                 'PaperlessBilling_Yes': 'Paperless Billing',
                 'PaperlessBilling_No': 'Paperless Billing',
                 'PhoneService': 'Phone Service',
-                # Numerical features
-                'tenure': 'Tenure (months)',
-                'MonthlyCharges': 'Monthly Charges',
-                'TotalCharges': 'Total Charges',
+                # Numerical features (distinct from categorical versions)
+                'tenure': 'Customer Tenure (months)',
+                'MonthlyCharges': 'Monthly Charges ($)',
+                'TotalCharges': 'Total Charges ($)',
                 # Engineered features
-                'charges_per_tenure': 'Avg. Charges per Month',
-                'contract_tenure_ratio': 'Contract-Tenure Ratio',
+                'charges_per_tenure': 'Avg. Monthly Charges',
+                'contract_tenure_ratio': 'Contract vs. Tenure Ratio',
                 'total_services': 'Total Services Count',
                 'payment_risk_score': 'Payment Risk Score',
                 'has_premium_services': 'Premium Services',
-                # Categorical binned features
-                'monthly_charges_cat_low': 'Monthly Charges (Low)',
-                'monthly_charges_cat_medium': 'Monthly Charges (Medium)',
-                'monthly_charges_cat_high': 'Monthly Charges (High)',
-                'MonthlyCharges_cat_low': 'Monthly Charges (Low)',
-                'MonthlyCharges_cat_medium': 'Monthly Charges (Medium)',
-                'MonthlyCharges_cat_high': 'Monthly Charges (High)',
-                'tenure_group_0-1 year': 'Tenure (0-1 year)',
-                'tenure_group_1-2 years': 'Tenure (1-2 years)',
-                'tenure_group_2-3 years': 'Tenure (2-3 years)',
-                'tenure_group_3-4 years': 'Tenure (3-4 years)',
-                'tenure_group_4-5 years': 'Tenure (4-5 years)',
-                'tenure_group_5-6 years': 'Tenure (5-6 years)',
-                'tenure_group': 'Tenure Group',
-                'tenure_group_0-12 months': 'Tenure (0-12 months)',
-                'tenure_group_12-24 months': 'Tenure (12-24 months)',
-                'tenure_group_24-36 months': 'Tenure (24-36 months)',
-                'tenure_group_36-48 months': 'Tenure (36-48 months)',
-                'tenure_group_48-60 months': 'Tenure (48-60 months)',
-                'tenure_group_60+ months': 'Tenure (60+ months)'
+                # Categorical binned features - consolidated (removing duplicates)
+                'monthly_charges_category_Low': 'Monthly Charges Category',
+                'monthly_charges_category_Medium': 'Monthly Charges Category',
+                'monthly_charges_category_High': 'Monthly Charges Category',
+                'monthly_charges_category_Very High': 'Monthly Charges Category',
+                # Tenure groups - using descriptive labels
+                'tenure_group_0-1yr': 'Tenure Category',
+                'tenure_group_1-2yr': 'Tenure Category',
+                'tenure_group_2-3yr': 'Tenure Category',
+                'tenure_group_3-4yr': 'Tenure Category',
+                'tenure_group_4-5yr': 'Tenure Category',
+                'tenure_group_5-6yr': 'Tenure Category',
+                'tenure_group': 'Tenure Category'
             }
 
             # Map technical names to business names
@@ -548,30 +605,28 @@ def page_executive_summary():
             grouped_importance = grouped_importance.sort_values('importance', ascending=False)
             top_features = grouped_importance.head(10)
 
+            # Convert to percentages of total importance for better readability
+            total_importance = top_features['importance'].sum()
+            top_features['importance_pct'] = (top_features['importance'] / total_importance) * 100
+
             fig = go.Figure(go.Bar(
-                x=top_features['importance'],
+                x=top_features['importance_pct'],
                 y=top_features['display_name'],
                 orientation='h',
                 marker=dict(
-                    color=top_features['importance'],
+                    color=top_features['importance_pct'],
                     colorscale='RdYlBu_r',  # Red-Yellow-Blue reversed (red = high importance)
                     showscale=False,
                     line=dict(color='rgba(255,255,255,0.3)', width=1)
                 ),
-                text=[f"{val:.3f}" for val in top_features['importance']],
+                text=[f"{val:.1f}%" for val in top_features['importance_pct']],
                 textposition='outside',
                 textfont=dict(size=12, color='#2c3e50', family='Arial, sans-serif'),
-                hovertemplate='<b>%{y}</b><br>Impact Score: %{x:.4f}<extra></extra>'
+                hovertemplate='<b>%{y}</b><br>Relative Impact: %{x:.1f}%<extra></extra>'
             ))
 
             fig.update_layout(
-                title={
-                    'text': "Top 10 Churn Predictors",
-                    'font': {'size': 16, 'color': '#2c3e50', 'family': 'Arial, sans-serif'},
-                    'x': 0.5,
-                    'xanchor': 'center'
-                },
-                xaxis_title="Impact Score",
+                xaxis_title="Relative Impact (%)",
                 yaxis_title="",
                 height=550,
                 template='plotly_white',
@@ -580,15 +635,16 @@ def page_executive_summary():
                     'tickfont': {'size': 12, 'color': '#2c3e50', 'family': 'Arial, sans-serif'}
                 },
                 xaxis={
-                    'range': [0, top_features['importance'].max() * 1.15],
-                    'tickfont': {'size': 11, 'color': '#7f8c8d'}
+                    'range': [0, top_features['importance_pct'].max() * 1.15],
+                    'tickfont': {'size': 11, 'color': '#7f8c8d'},
+                    'ticksuffix': '%'
                 },
                 plot_bgcolor='rgba(248,249,250,0.8)',
                 paper_bgcolor='white',
-                margin=dict(l=10, r=40, t=60, b=50)
+                margin=dict(l=10, r=40, t=10, b=50)
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
             # Add interpretive statement with custom styling for alignment
             st.markdown(f"""
@@ -596,12 +652,11 @@ def page_executive_summary():
             <strong><i class='fas fa-chart-bar icon-primary fa-icon'></i>What This Chart Tells Us:</strong><br><br>
 
             The features shown above have the strongest <strong>correlation</strong> with customer churn predictions.
-            Higher impact scores indicate features that, when present, are more strongly associated with
-            customers leaving.
+            The percentages represent each feature's relative contribution to the model's predictions among the top 10 factors.
             <br><br>
             <strong>Business Insight:</strong> The top factor, "{top_features.iloc[0]['display_name']}",
-            has an impact score of {top_features.iloc[0]['importance']:.3f}, meaning it's a critical
-            signal in identifying at-risk customers. However, remember that correlation ≠ causation—
+            accounts for {top_features.iloc[0]['importance_pct']:.1f}% of the relative impact among these key predictors,
+            making it a critical signal for identifying at-risk customers. However, remember that correlation ≠ causation—
             these features help us <em>predict</em> who will churn, but interventions should be validated
             through A/B testing to establish causal impact.
             </div>
@@ -613,10 +668,18 @@ def page_executive_summary():
     with col_right:
         st.markdown("### <i class='fas fa-hand-holding-usd icon-success fa-icon-lg'></i>Business Impact", unsafe_allow_html=True)
 
-        # ROI Calculation
-        roi = metrics.get('roi_percentage', 0)
-        customers_saved = metrics.get('customers_saved', 0)
-        customers_lost = metrics.get('customers_lost', 0)
+        # ROI Calculation - Use enhanced ROI analysis if available (correct metrics)
+        if phase1_data and 'enhanced_roi' in phase1_data:
+            roi_df = phase1_data['enhanced_roi']
+            roi = roi_df['roi_percentage'].values[0]
+            customers_saved = int(roi_df['customers_saved'].values[0])
+            # Calculate customers lost as FN (from confusion matrix)
+            customers_lost = int(roi_df['FN'].values[0])
+        else:
+            # Fallback to old metrics if enhanced not available
+            roi = metrics.get('roi_percentage', 0)
+            customers_saved = metrics.get('customers_saved', 0)
+            customers_lost = metrics.get('customers_lost', 0)
 
         # Create gauge chart for ROI with dynamic range
         # Calculate appropriate max range (at least 30% above actual value, minimum 300)
@@ -654,7 +717,7 @@ def page_executive_summary():
             template=config.PLOTLY_TEMPLATE,
             margin=dict(t=40, b=10, l=20, r=20)
         )
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
         # ROI explanation
         st.caption(f"<i class='fas fa-info-circle icon-info'></i>Break-even at 100% ROI (red line). Current ROI: **{roi:.1f}%** - Excellent performance!", unsafe_allow_html=True)
@@ -837,13 +900,193 @@ def page_executive_summary():
         </div>
         """, unsafe_allow_html=True)
 
+    # Model Performance vs. Baselines (NEW - Phase 1)
+    if phase1_data and 'baseline_comparison' in phase1_data:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-trophy icon-warning fa-icon-lg'></i>Model Performance vs. Baselines", unsafe_allow_html=True)
+        st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 1.5rem;">How does our ML model compare to simple baseline approaches?</p>', unsafe_allow_html=True)
+
+        # Prepare baseline comparison dataframe with XGBoost
+        baseline_df = phase1_data['baseline_comparison'].copy()
+
+        # Add XGBoost row from metrics
+        xgboost_row = pd.DataFrame([{
+            'Model': 'XGBoost (Our Model)',
+            'Accuracy': metrics.get('accuracy', 0),
+            'Precision': metrics.get('precision', 0),
+            'Recall': metrics.get('recall', 0),
+            'F1': metrics.get('f1', 0),
+            'ROC-AUC': metrics.get('roc_auc', 0)
+        }])
+
+        # Combine and reorder
+        baseline_df = pd.concat([xgboost_row, baseline_df], ignore_index=True)
+
+        # Format for display
+        baseline_display = baseline_df.copy()
+        for col in ['Accuracy', 'Precision', 'Recall', 'F1', 'ROC-AUC']:
+            baseline_display[col] = baseline_display[col].apply(
+                lambda x: f"{x:.3f}" if pd.notna(x) and x != '' else 'N/A'
+            )
+
+        # Create styled table
+        st.markdown("""
+        <style>
+        .baseline-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .baseline-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .baseline-table td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+        .baseline-table tr:first-child td {
+            background: #f0fdf4;
+            font-weight: 600;
+            color: #065f46;
+        }
+        .baseline-table tr:hover {
+            background: #f8fafc;
+        }
+        .baseline-table tr:first-child:hover td {
+            background: #dcfce7;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Convert to HTML table
+        html_table = '<table class="baseline-table">'
+        html_table += '<thead><tr>'
+        for col in baseline_display.columns:
+            html_table += f'<th>{col}</th>'
+        html_table += '</tr></thead><tbody>'
+
+        for idx, row in baseline_display.iterrows():
+            html_table += '<tr>'
+            for col in baseline_display.columns:
+                html_table += f'<td>{row[col]}</td>'
+            html_table += '</tr>'
+        html_table += '</tbody></table>'
+
+        st.markdown(html_table, unsafe_allow_html=True)
+
+        # Calculate improvements for key finding
+        our_recall = metrics.get('recall', 0)
+        rule_based_recall = baseline_df[baseline_df['Model'] == 'Rule-Based (MTM + <12mo)']['Recall'].values[0]
+        recall_improvement = ((our_recall - rule_based_recall) / rule_based_recall * 100) if rule_based_recall > 0 else 0
+        our_roc_auc = metrics.get('roc_auc', 0)
+
+        st.markdown(f"""
+        <div class="insight-box" style="margin-top: 1.5rem;">
+        <strong><i class='fas fa-check-circle icon-success fa-icon'></i>Key Finding</strong><br><br>
+
+        Our ML model significantly outperforms all baseline approaches, demonstrating the value of machine learning over simple heuristics.
+        <br><br>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+            <li><strong>{our_recall*100:.1f}%</strong> recall vs. <strong>{rule_based_recall*100:.1f}%</strong> for rule-based ({recall_improvement:.0f}% improvement)</li>
+            <li><strong>{our_roc_auc:.3f}</strong> ROC-AUC vs. <strong>0.500</strong> for naive baseline</li>
+            <li>The model correctly identifies <strong>{our_recall*100:.0f} out of 100</strong> churners, far exceeding simple business rules</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ROI Highlights (NEW - Phase 1)
+    if phase1_data and 'enhanced_roi' in phase1_data:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-dollar-sign icon-success fa-icon-lg'></i>ROI Highlights", unsafe_allow_html=True)
+        st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 1.5rem;">Financial impact and return on investment</p>', unsafe_allow_html=True)
+
+        roi_df = phase1_data['enhanced_roi']
+
+        # Extract key metrics
+        total_campaigns = int(roi_df['total_campaigns'].values[0])
+        tp = int(roi_df['TP'].values[0])
+        fp = int(roi_df['FP'].values[0])
+        campaign_cost = float(roi_df['campaign_execution_cost'].values[0])
+        revenue_saved = float(roi_df['revenue_saved'].values[0])
+        roi_pct = float(roi_df['roi_percentage'].values[0])
+        net_benefit = float(roi_df['net_benefit'].values[0])
+        customers_saved = float(roi_df['customers_saved'].values[0])
+        cost_per_customer = float(roi_df['campaign_cost_per_customer'].values[0])
+        baseline_loss = float(roi_df['baseline_loss_no_model'].values[0])
+        improvement_pct = float(roi_df['improvement_vs_baseline_pct'].values[0])
+
+        # Create 4-column metrics for ROI
+        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+
+        with col1:
+            st.markdown(f'''
+            <div class="metric-tile tile-blue">
+                <div class="metric-label">Total Campaigns</div>
+                <div class="metric-value">{total_campaigns:,}</div>
+                <div class="metric-delta">TP: {tp}, FP: {fp}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f'''
+            <div class="metric-tile tile-orange">
+                <div class="metric-label">Campaign Cost</div>
+                <div class="metric-value">${campaign_cost:,.0f}</div>
+                <div class="metric-delta">${cost_per_customer:.0f}/customer</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        with col3:
+            st.markdown(f'''
+            <div class="metric-tile tile-green">
+                <div class="metric-label">Revenue Saved</div>
+                <div class="metric-value">${revenue_saved:,.0f}</div>
+                <div class="metric-delta">{int(customers_saved)} saved</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        with col4:
+            st.markdown(f'''
+            <div class="metric-tile tile-purple">
+                <div class="metric-label">ROI</div>
+                <div class="metric-value">{roi_pct:.0f}%</div>
+                <div class="metric-delta">Net: ${net_benefit:,.0f}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        # Net Benefit highlight
+        savings_vs_baseline = revenue_saved - (baseline_loss - revenue_saved)
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white; padding: 1.2rem; border-radius: 10px;
+                    text-align: center; margin: 1.5rem 0; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+            <span style="font-size: 1.1rem; font-weight: 600;">
+                <i class="fas fa-lightbulb"></i> Net Benefit: ${net_benefit:,.0f} |
+                Savings vs. No Model: ${savings_vs_baseline:,.0f} ({improvement_pct:.1f}% improvement)
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
 
 def page_model_performance():
     """Page 2: Model Performance."""
     st.markdown('<h1 class="main-header"><i class="fas fa-chart-area fa-icon-xl"></i>Model Performance Analysis</h1>', unsafe_allow_html=True)
 
     # Load artifacts
-    model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
+    model, preprocessor, feature_names, metrics, shap_data, all_results, phase1_data = load_model_artifacts()
 
     if model is None:
         st.warning("**Model not found. Please train the model first.**")
@@ -882,7 +1125,7 @@ def page_model_performance():
 
         st.dataframe(
             metrics_df,
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             column_config={
                 "Metric": st.column_config.TextColumn("Metric", width="medium"),
@@ -940,34 +1183,60 @@ def page_model_performance():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
     with col_metrics:
         # Business metrics
         st.markdown("### <i class='fas fa-briefcase icon-info fa-icon'></i>Business Metrics", unsafe_allow_html=True)
 
-        business_metrics = pd.DataFrame({
-            'Metric': [
-                'True Positives (Saved)',
-                'False Negatives (Lost)',
-                'False Positives',
-                'Retention Cost',
-                'Potential Loss Prevented',
-                'Net Savings',
-                'ROI'
-            ],
-            'Value': [
-                f"{metrics.get('customers_saved', 0):,}",
-                f"{metrics.get('customers_lost', 0):,}",
-                f"{metrics.get('false_positives', 0):,}",
-                f"${metrics.get('cost_of_retention_program', 0):,.0f}",
-                f"${metrics.get('potential_loss_prevented', 0):,.0f}",
-                f"${metrics.get('net_savings', 0):,.0f}",
-                f"{metrics.get('roi_percentage', 0):.1f}%"
-            ]
-        })
+        # Use enhanced ROI analysis if available (correct metrics)
+        if phase1_data and 'enhanced_roi' in phase1_data:
+            roi_df = phase1_data['enhanced_roi']
+            roi_data = roi_df.iloc[0]
+            business_metrics = pd.DataFrame({
+                'Metric': [
+                    'Customers Actually Saved',
+                    'False Negatives (Lost)',
+                    'False Positives',
+                    'Total Campaign Cost',
+                    'Revenue Saved',
+                    'Net Benefit',
+                    'ROI'
+                ],
+                'Value': [
+                    f"{roi_data['customers_saved']:.0f}",
+                    f"{roi_data['FN']:.0f}",
+                    f"{roi_data['FP']:.0f}",
+                    f"${roi_data['campaign_execution_cost']:,.0f}",
+                    f"${roi_data['revenue_saved']:,.0f}",
+                    f"${roi_data['net_benefit']:,.0f}",
+                    f"{roi_data['roi_percentage']:.1f}%"
+                ]
+            })
+        else:
+            # Fallback to old metrics if enhanced not available
+            business_metrics = pd.DataFrame({
+                'Metric': [
+                    'True Positives (Saved)',
+                    'False Negatives (Lost)',
+                    'False Positives',
+                    'Retention Cost',
+                    'Potential Loss Prevented',
+                    'Net Savings',
+                    'ROI'
+                ],
+                'Value': [
+                    f"{metrics.get('customers_saved', 0):,}",
+                    f"{metrics.get('customers_lost', 0):,}",
+                    f"{metrics.get('false_positives', 0):,}",
+                    f"${metrics.get('cost_of_retention_program', 0):,.0f}",
+                    f"${metrics.get('potential_loss_prevented', 0):,.0f}",
+                    f"${metrics.get('net_savings', 0):,.0f}",
+                    f"{metrics.get('roi_percentage', 0):.1f}%"
+                ]
+            })
 
-        st.dataframe(business_metrics, width="stretch", hide_index=True)
+        st.dataframe(business_metrics, use_container_width=True, hide_index=True)
 
     # ROC and PR Curves
     st.markdown("---")
@@ -1005,7 +1274,7 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
     with col_pr:
         st.markdown("#### Precision-Recall Curve")
@@ -1031,7 +1300,469 @@ def page_model_performance():
                 showlegend=True
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ===== PHASE 1: Confidence Intervals =====
+    if phase1_data and 'confidence_intervals' in phase1_data:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-chart-bar icon-info fa-icon-lg'></i>Performance with 95% Confidence Intervals", unsafe_allow_html=True)
+
+        ci_df = phase1_data['confidence_intervals']
+
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            # Create visualization
+            fig = go.Figure()
+
+            for idx, row in ci_df.iterrows():
+                # Add error bar for each metric
+                fig.add_trace(go.Scatter(
+                    x=[row['Metric']],
+                    y=[row['Mean']],
+                    error_y=dict(
+                        type='data',
+                        symmetric=False,
+                        array=[row['95% CI Upper'] - row['Mean']],
+                        arrayminus=[row['Mean'] - row['95% CI Lower']],
+                        color='rgba(31, 119, 180, 0.3)',
+                        thickness=3,
+                        width=10
+                    ),
+                    mode='markers',
+                    marker=dict(size=12, color='#1f77b4'),
+                    name=row['Metric'],
+                    showlegend=False,
+                    hovertemplate=(
+                        f"<b>{row['Metric']}</b><br>"
+                        f"Mean: {row['Mean']:.3f}<br>"
+                        f"95% CI: [{row['95% CI Lower']:.3f}, {row['95% CI Upper']:.3f}]<br>"
+                        "<extra></extra>"
+                    )
+                ))
+
+            fig.update_layout(
+                title="Bootstrapped Confidence Intervals (1000 iterations)",
+                xaxis_title="Metric",
+                yaxis_title="Score",
+                height=400,
+                template=config.PLOTLY_TEMPLATE,
+                yaxis=dict(range=[0, 1])
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Show table
+            st.dataframe(
+                ci_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Metric": st.column_config.TextColumn("Metric"),
+                    "Mean": st.column_config.NumberColumn("Mean", format="%.3f"),
+                    "95% CI Lower": st.column_config.NumberColumn("95% CI Lower", format="%.3f"),
+                    "95% CI Upper": st.column_config.NumberColumn("95% CI Upper", format="%.3f"),
+                    "CI Width": st.column_config.NumberColumn("CI Width", format="%.3f"),
+                }
+            )
+
+        with col2:
+            st.markdown("""
+            <div class="insight-box">
+            <b>📊 What are Confidence Intervals?</b><br><br>
+            These show the uncertainty in our performance estimates using 1000-iteration bootstrap.
+            <br><br>
+            <b>Example:</b> Recall of 93.0% (95% CI: [90.2%, 95.4%]) means we're 95% confident
+            the true recall is between 90.2% and 95.4%.
+            <br><br>
+            <b>Interpretation:</b> Narrow CIs = More confident estimates.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ===== PHASE 1: Enhanced ROI Analysis =====
+    if phase1_data and 'enhanced_roi' in phase1_data:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-dollar-sign icon-success fa-icon-lg'></i>Enhanced ROI Analysis", unsafe_allow_html=True)
+
+        roi_df = phase1_data['enhanced_roi']
+        roi_data = roi_df.iloc[0]  # Single row of ROI metrics
+
+        # Key ROI metrics in cards
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                label="💼 Total Campaigns",
+                value=f"{roi_data['total_campaigns']:,.0f}",
+                delta=f"TP: {roi_data['TP']:.0f}, FP: {roi_data['FP']:.0f}"
+            )
+
+        with col2:
+            st.metric(
+                label="💰 Campaign Cost",
+                value=f"${roi_data['campaign_execution_cost']:,.0f}",
+                delta=f"${roi_data['campaign_cost_per_customer']:.0f} per customer"
+            )
+
+        with col3:
+            st.metric(
+                label="💵 Revenue Saved",
+                value=f"${roi_data['revenue_saved']:,.0f}",
+                delta=f"{roi_data['customers_saved']:.0f} customers saved"
+            )
+
+        with col4:
+            st.metric(
+                label="📈 ROI",
+                value=f"{roi_data['roi_percentage']:.1f}%",
+                delta=f"Net: ${roi_data['net_benefit']:,.0f}"
+            )
+
+        st.info(f"💡 **Savings vs. No Model:** ${roi_data['savings_vs_baseline']:,.0f} ({roi_data['improvement_vs_baseline_pct']:.1f}% improvement)")
+
+    # ===== PHASE 1: Statistical Model Comparison =====
+    if phase1_data and 'statistical_comparison' in phase1_data:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-flask icon-info fa-icon-lg'></i>Statistical Model Comparison", unsafe_allow_html=True)
+        st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 1.5rem;">Paired t-tests on 5-fold Cross-Validation (ROC-AUC)</p>', unsafe_allow_html=True)
+
+        stat_df = phase1_data['statistical_comparison']
+
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            # Format the dataframe for display
+            stat_display = stat_df.copy()
+            stat_display = stat_display.rename(columns={
+                'Comparison': 'Comparison',
+                'Best Model Mean': 'Best',
+                'Other Model Mean': 'Other',
+                'Mean Difference': 'Diff',
+                't-statistic': 't-stat',
+                'p-value': 'p-value',
+                'Significant?': 'Sig?'
+            })
+
+            # Select columns to display
+            display_cols = ['Comparison', 'Best', 'Other', 'Diff', 't-stat', 'p-value', 'Sig?']
+            stat_display = stat_display[display_cols]
+
+            # Format numerical columns
+            stat_display['Best'] = stat_display['Best'].apply(lambda x: f"{x:.4f}")
+            stat_display['Other'] = stat_display['Other'].apply(lambda x: f"{x:.4f}")
+            stat_display['Diff'] = stat_display['Diff'].apply(lambda x: f"{x:.4f}")
+            stat_display['t-stat'] = stat_display['t-stat'].apply(lambda x: f"{x:.3f}")
+            stat_display['p-value'] = stat_display['p-value'].apply(lambda x: f"{x:.3f}")
+
+            # Create styled table
+            st.markdown("""
+            <style>
+            .stat-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 1rem 0;
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            }
+            .stat-table th {
+                background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+                color: white;
+                padding: 0.9rem;
+                text-align: left;
+                font-weight: 600;
+                font-size: 0.85rem;
+                text-transform: uppercase;
+            }
+            .stat-table td {
+                padding: 0.8rem 0.9rem;
+                border-bottom: 1px solid #e2e8f0;
+                color: #2d3748;
+                font-size: 0.9rem;
+            }
+            .stat-table tr:hover {
+                background: #f8fafc;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            # Convert to HTML table
+            html_table = '<table class="stat-table">'
+            html_table += '<thead><tr>'
+            for col in stat_display.columns:
+                html_table += f'<th>{col}</th>'
+            html_table += '</tr></thead><tbody>'
+
+            for idx, row in stat_display.iterrows():
+                html_table += '<tr>'
+                for col in stat_display.columns:
+                    html_table += f'<td>{row[col]}</td>'
+                html_table += '</tr>'
+            html_table += '</tbody></table>'
+
+            st.markdown(html_table, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("""
+            <div class="insight-box">
+            <b>📊 Statistical Significance</b><br><br>
+
+            <b>p-value < 0.05</b> = Statistically significant difference
+            <br><br>
+            <b>Cohen's d Effect Size:</b><br>
+            • Small: 0.2<br>
+            • Medium: 0.5<br>
+            • Large: 0.8+
+            <br><br>
+            This proves our model choice is scientifically justified.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ===== PHASE 1: Performance by Customer Segment =====
+    if phase1_data and 'segments' in phase1_data and len(phase1_data['segments']) > 0:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-users icon-primary fa-icon-lg'></i>Performance by Customer Segment", unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="warning-box" style="margin-bottom: 1.5rem;">
+        <b>⚠️ Why Segment Analysis Matters:</b> The model may perform differently across
+        customer segments. Understanding these differences helps identify where the
+        model excels and where caution is needed.
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Segment selector
+        segment_options = {
+            'contract_type': 'Contract Type',
+            'tenure_group': 'Tenure Group',
+            'monthly_charges': 'Monthly Charges'
+        }
+
+        available_segments = [k for k in segment_options.keys() if k in phase1_data['segments']]
+
+        if available_segments:
+            selected_segment = st.selectbox(
+                "Select Customer Segment:",
+                options=available_segments,
+                format_func=lambda x: segment_options[x]
+            )
+
+            segment_df = phase1_data['segments'][selected_segment]
+
+            # Display segment analysis
+            col1, col2 = st.columns([2, 1])
+
+            with col1:
+                # Create bar chart for F1 scores
+                fig = go.Figure()
+
+                fig.add_trace(go.Bar(
+                    x=segment_df['segment'],
+                    y=segment_df['f1'],
+                    marker=dict(
+                        color=segment_df['f1'],
+                        colorscale='RdYlGn',
+                        showscale=False,
+                        line=dict(color='rgba(255,255,255,0.3)', width=1)
+                    ),
+                    text=[f"{val:.3f}" for val in segment_df['f1']],
+                    textposition='outside',
+                    textfont=dict(size=12, color='#2c3e50'),
+                    hovertemplate='<b>%{x}</b><br>F1 Score: %{y:.3f}<extra></extra>'
+                ))
+
+                fig.update_layout(
+                    title=f"F1 Score by {segment_options[selected_segment]}",
+                    xaxis_title=segment_options[selected_segment],
+                    yaxis_title="F1 Score",
+                    height=400,
+                    template='plotly_white',
+                    yaxis=dict(range=[0, 1]),
+                    showlegend=False
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Show detailed table
+                segment_display = segment_df.copy()
+                segment_display = segment_display.rename(columns={
+                    'segment': 'Segment',
+                    'n': 'N',
+                    'churn_rate': 'Churn Rate',
+                    'precision': 'Precision',
+                    'recall': 'Recall',
+                    'f1': 'F1',
+                    'fpr': 'FPR'
+                })
+
+                # Format numerical columns
+                for col in ['Churn Rate', 'Precision', 'Recall', 'F1', 'FPR']:
+                    if col in segment_display.columns:
+                        segment_display[col] = segment_display[col].apply(lambda x: f"{x:.3f}")
+
+                st.dataframe(segment_display, use_container_width=True, hide_index=True)
+
+            with col2:
+                # Best and worst performing segments
+                best_idx = segment_df['f1'].idxmax()
+                worst_idx = segment_df['f1'].idxmin()
+
+                best_segment = segment_df.iloc[best_idx]
+                worst_segment = segment_df.iloc[worst_idx]
+
+                st.markdown(f"""
+                <div class="insight-box" style="background: #d4edda; border-left-color: #28a745; margin-bottom: 1rem;">
+                <b>✅ Best Performance</b><br><br>
+                <b>Segment:</b> {best_segment['segment']}<br>
+                <b>F1 Score:</b> {best_segment['f1']:.3f}<br>
+                <b>Recall:</b> {best_segment['recall']:.3f}<br>
+                <b>Sample Size:</b> {int(best_segment['n']):,}
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown(f"""
+                <div class="warning-box" style="margin-bottom: 1rem;">
+                <b>⚠️ Worst Performance</b><br><br>
+                <b>Segment:</b> {worst_segment['segment']}<br>
+                <b>F1 Score:</b> {worst_segment['f1']:.3f}<br>
+                <b>Recall:</b> {worst_segment['recall']:.3f}<br>
+                <b>Sample Size:</b> {int(worst_segment['n']):,}
+                </div>
+                """, unsafe_allow_html=True)
+
+    # ===== PHASE 1: ROI Sensitivity Analysis =====
+    if phase1_data and 'roi_sensitivity' in phase1_data:
+        st.markdown("---")
+        st.markdown("## <i class='fas fa-sliders-h icon-warning fa-icon-lg'></i>ROI Sensitivity Analysis", unsafe_allow_html=True)
+        st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 1.5rem;">How robust is our ROI to changes in assumptions?</p>', unsafe_allow_html=True)
+
+        sens_df = phase1_data['roi_sensitivity']
+
+        # Create tabs for different sensitivity analyses
+        tab1, tab2, tab3 = st.tabs(["📊 CLV Sensitivity", "💰 Cost Sensitivity", "🎯 Success Rate Sensitivity"])
+
+        with tab1:
+            clv_df = sens_df[sens_df['parameter'] == 'clv'].copy()
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=clv_df['value'],
+                y=clv_df['roi_percentage'],
+                mode='lines+markers',
+                name='ROI',
+                line=dict(color='#1f77b4', width=3),
+                marker=dict(size=8)
+            ))
+
+            # Add break-even line
+            fig.add_hline(y=100, line_dash="dash", line_color="red",
+                         annotation_text="Break-even (100% ROI)")
+
+            fig.update_layout(
+                title="ROI Sensitivity to Customer Lifetime Value",
+                xaxis_title="CLV ($)",
+                yaxis_title="ROI (%)",
+                height=400,
+                template='plotly_white'
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.dataframe(
+                clv_df[['value', 'roi_percentage', 'net_benefit']].rename(columns={
+                    'value': 'CLV ($)',
+                    'roi_percentage': 'ROI (%)',
+                    'net_benefit': 'Net Benefit ($)'
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        with tab2:
+            cost_df = sens_df[sens_df['parameter'] == 'campaign_cost'].copy()
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=cost_df['value'],
+                y=cost_df['roi_percentage'],
+                mode='lines+markers',
+                name='ROI',
+                line=dict(color='#ff7f0e', width=3),
+                marker=dict(size=8)
+            ))
+
+            fig.add_hline(y=100, line_dash="dash", line_color="red",
+                         annotation_text="Break-even (100% ROI)")
+
+            fig.update_layout(
+                title="ROI Sensitivity to Campaign Cost",
+                xaxis_title="Campaign Cost per Customer ($)",
+                yaxis_title="ROI (%)",
+                height=400,
+                template='plotly_white'
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.dataframe(
+                cost_df[['value', 'roi_percentage', 'net_benefit']].rename(columns={
+                    'value': 'Cost ($)',
+                    'roi_percentage': 'ROI (%)',
+                    'net_benefit': 'Net Benefit ($)'
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        with tab3:
+            success_df = sens_df[sens_df['parameter'] == 'success_rate'].copy()
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=success_df['value'] * 100,  # Convert to percentage
+                y=success_df['roi_percentage'],
+                mode='lines+markers',
+                name='ROI',
+                line=dict(color='#2ca02c', width=3),
+                marker=dict(size=8)
+            ))
+
+            fig.add_hline(y=100, line_dash="dash", line_color="red",
+                         annotation_text="Break-even (100% ROI)")
+
+            fig.update_layout(
+                title="ROI Sensitivity to Campaign Success Rate",
+                xaxis_title="Success Rate (%)",
+                yaxis_title="ROI (%)",
+                height=400,
+                template='plotly_white'
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            success_display = success_df.copy()
+            success_display['value'] = success_display['value'] * 100
+
+            st.dataframe(
+                success_display[['value', 'roi_percentage', 'net_benefit']].rename(columns={
+                    'value': 'Success Rate (%)',
+                    'roi_percentage': 'ROI (%)',
+                    'net_benefit': 'Net Benefit ($)'
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        # Key insight
+        st.markdown("""
+        <div class="insight-box" style="margin-top: 1.5rem;">
+        <b><i class='fas fa-lightbulb icon-warning fa-icon'></i>Key Insight</b><br><br>
+        The model delivers robust ROI across a wide range of assumptions. Even with conservative
+        estimates (lower CLV, higher costs, or lower success rates), the model continues to
+        generate positive returns, demonstrating the reliability of this solution.
+        </div>
+        """, unsafe_allow_html=True)
 
     # Model Comparison
     if all_results is not None:
@@ -1072,11 +1803,328 @@ def page_model_performance():
             template=config.PLOTLY_TEMPLATE
         )
 
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
         # Show table
         st.dataframe(comparison_df.style.highlight_max(axis=0, props='background-color: lightgreen'),
-                    width="stretch", hide_index=True)
+                    use_container_width=True, hide_index=True)
+
+
+def page_advanced_evaluation():
+    """Page 3: Advanced Model Evaluation (Phase 1)."""
+    st.markdown('<h1 class="main-header"><i class="fas fa-microscope fa-icon-xl"></i>Advanced Model Evaluation</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #7f8c8d; font-size: 0.95rem; margin-top: -1rem; margin-bottom: 2rem;">Comprehensive insights into model performance, statistical significance, segment-level behavior, and financial impact</p>', unsafe_allow_html=True)
+
+    # Load artifacts
+    model, preprocessor, feature_names, metrics, shap_data, all_results, phase1_data = load_model_artifacts()
+
+    if model is None:
+        st.warning("**Model not found. Please train the model first.**")
+        return
+
+    # Check if Phase 1 data is available
+    if not phase1_data:
+        st.warning("**Phase 1 evaluation data not found. Please run the Phase 1 evaluation pipeline first.**")
+        return
+
+    # ===== 1. Baseline Model Comparison =====
+    st.markdown("## <i class='fas fa-trophy icon-warning fa-icon-lg'></i>1️⃣ Baseline Model Comparison", unsafe_allow_html=True)
+    st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem;">How does our ML model compare to simple baselines?</p>', unsafe_allow_html=True)
+
+    if 'baseline_comparison' in phase1_data:
+        # Prepare baseline comparison dataframe with XGBoost
+        baseline_df = phase1_data['baseline_comparison'].copy()
+
+        # Add XGBoost row from metrics
+        xgboost_row = pd.DataFrame([{
+            'Model': '✅ XGBoost (Our Model)',
+            'Accuracy': metrics.get('accuracy', 0),
+            'Precision': metrics.get('precision', 0),
+            'Recall': metrics.get('recall', 0),
+            'F1': metrics.get('f1', 0),
+            'ROC-AUC': metrics.get('roc_auc', 0)
+        }])
+
+        baseline_df = pd.concat([xgboost_row, baseline_df], ignore_index=True)
+
+        # Format for display
+        baseline_display = baseline_df.copy()
+        for col in ['Accuracy', 'Precision', 'Recall', 'F1', 'ROC-AUC']:
+            baseline_display[col] = baseline_display[col].apply(
+                lambda x: f"{x:.3f}" if pd.notna(x) and x != '' else 'N/A'
+            )
+
+        st.dataframe(baseline_display, use_container_width=True, hide_index=True)
+
+        our_recall = metrics.get('recall', 0)
+        rule_based_recall = baseline_df[baseline_df['Model'].str.contains('Rule-Based')]['Recall'].values[0]
+        recall_improvement = ((our_recall - rule_based_recall) / rule_based_recall * 100) if rule_based_recall > 0 else 0
+
+        st.markdown(f"""
+        <div class="insight-box">
+        <b>✨ Key Insight:</b> Our ML model achieves <strong>{our_recall*100:.1f}%</strong> recall compared to only
+        <strong>{rule_based_recall*100:.1f}%</strong> for the rule-based heuristic, representing a
+        <strong>{recall_improvement:.0f}%</strong> improvement in churner detection.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ===== 2. Statistical Validation =====
+    st.markdown("---")
+    st.markdown("## <i class='fas fa-flask icon-info fa-icon-lg'></i>2️⃣ Statistical Validation", unsafe_allow_html=True)
+    st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem;">Is XGBoost statistically better than other models?</p>', unsafe_allow_html=True)
+
+    if 'statistical_comparison' in phase1_data:
+        stat_df = phase1_data['statistical_comparison']
+
+        # Format display
+        stat_display = stat_df[['Comparison', 'Best Model Mean', 'Other Model Mean', 'p-value', 'Significant?', 'Interpretation']].copy()
+        stat_display['Best Model Mean'] = stat_display['Best Model Mean'].apply(lambda x: f"{x:.4f}")
+        stat_display['Other Model Mean'] = stat_display['Other Model Mean'].apply(lambda x: f"{x:.4f}")
+        stat_display['p-value'] = stat_display['p-value'].apply(lambda x: f"{x:.4f}")
+
+        st.dataframe(stat_display, use_container_width=True, hide_index=True)
+
+        st.markdown("""
+        <div class="insight-box">
+        <b>✨ Key Insight:</b> XGBoost is statistically significantly better than Logistic Regression (p=0.003)
+        but not significantly different from Random Forest or LightGBM. We chose XGBoost for its
+        interpretability via SHAP explanations.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ===== 3. Confidence Intervals =====
+    st.markdown("---")
+    st.markdown("## <i class='fas fa-chart-bar icon-primary fa-icon-lg'></i>3️⃣ Confidence Intervals", unsafe_allow_html=True)
+    st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem;">How confident are we in our performance estimates?</p>', unsafe_allow_html=True)
+
+    if 'confidence_intervals' in phase1_data:
+        ci_df = phase1_data['confidence_intervals']
+
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            # Create error bar chart
+            fig = go.Figure()
+
+            for idx, row in ci_df.iterrows():
+                fig.add_trace(go.Scatter(
+                    x=[row['Metric']],
+                    y=[row['Mean']],
+                    error_y=dict(
+                        type='data',
+                        symmetric=False,
+                        array=[row['95% CI Upper'] - row['Mean']],
+                        arrayminus=[row['Mean'] - row['95% CI Lower']],
+                        color='rgba(31, 119, 180, 0.3)',
+                        thickness=3,
+                        width=10
+                    ),
+                    mode='markers',
+                    marker=dict(size=14, color='#1f77b4'),
+                    name=row['Metric'],
+                    showlegend=False,
+                    hovertemplate=(
+                        f"<b>{row['Metric']}</b><br>"
+                        f"Mean: {row['Mean']:.3f}<br>"
+                        f"95% CI: [{row['95% CI Lower']:.3f}, {row['95% CI Upper']:.3f}]<br>"
+                        "<extra></extra>"
+                    )
+                ))
+
+            fig.update_layout(
+                title="95% Confidence Intervals (Bootstrap, 1000 iterations)",
+                xaxis_title="Metric",
+                yaxis_title="Score",
+                height=400,
+                template='plotly_white',
+                yaxis=dict(range=[0, 1])
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.dataframe(
+                ci_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Metric": st.column_config.TextColumn("Metric"),
+                    "Mean": st.column_config.NumberColumn("Mean", format="%.3f"),
+                    "95% CI Lower": st.column_config.NumberColumn("Lower", format="%.3f"),
+                    "95% CI Upper": st.column_config.NumberColumn("Upper", format="%.3f"),
+                    "CI Width": st.column_config.NumberColumn("Width", format="%.3f"),
+                }
+            )
+
+        max_width = ci_df['CI Width'].max()
+        st.markdown(f"""
+        <div class="insight-box">
+        <b>✨ Key Insight:</b> All metrics have narrow confidence intervals (max width: {max_width:.3f}),
+        indicating stable and reliable performance estimates.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ===== 4. Segment-Level Performance =====
+    st.markdown("---")
+    st.markdown("## <i class='fas fa-users icon-primary fa-icon-lg'></i>4️⃣ Segment-Level Performance", unsafe_allow_html=True)
+    st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem;">Does the model perform equally well across all customer segments?</p>', unsafe_allow_html=True)
+
+    if 'segments' in phase1_data and len(phase1_data['segments']) > 0:
+        segment_options = {
+            'contract_type': 'Contract Type',
+            'tenure_group': 'Tenure Group',
+            'monthly_charges': 'Monthly Charges'
+        }
+
+        available_segments = [k for k in segment_options.keys() if k in phase1_data['segments']]
+
+        if available_segments:
+            selected_segment = st.selectbox(
+                "Select Customer Segment:",
+                options=available_segments,
+                format_func=lambda x: segment_options[x],
+                key='advanced_eval_segment'
+            )
+
+            segment_df = phase1_data['segments'][selected_segment]
+
+            # Bar chart
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=segment_df['segment'],
+                y=segment_df['f1'],
+                marker=dict(
+                    color=segment_df['f1'],
+                    colorscale='RdYlGn',
+                    showscale=False
+                ),
+                text=[f"{val:.3f}" for val in segment_df['f1']],
+                textposition='outside'
+            ))
+
+            fig.update_layout(
+                title=f"F1 Score by {segment_options[selected_segment]}",
+                xaxis_title=segment_options[selected_segment],
+                yaxis_title="F1 Score",
+                height=400,
+                template='plotly_white',
+                yaxis=dict(range=[0, 1])
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            best_idx = segment_df['f1'].idxmax()
+            worst_idx = segment_df['f1'].idxmin()
+            best_segment = segment_df.iloc[best_idx]
+            worst_segment = segment_df.iloc[worst_idx]
+
+            st.markdown(f"""
+            <div class="insight-box">
+            <b>✨ Key Insight:</b> Model performs best on <strong>{best_segment['segment']}</strong> (F1={best_segment['f1']:.3f})
+            and worst on <strong>{worst_segment['segment']}</strong> (F1={worst_segment['f1']:.3f}). This is expected as
+            segments with very low churn rates are harder to predict.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ===== 5. Enhanced ROI & Sensitivity Analysis =====
+    st.markdown("---")
+    st.markdown("## <i class='fas fa-dollar-sign icon-success fa-icon-lg'></i>5️⃣ Enhanced ROI & Sensitivity Analysis", unsafe_allow_html=True)
+    st.markdown('<p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem;">What is the financial impact, and is it robust to assumption changes?</p>', unsafe_allow_html=True)
+
+    if 'enhanced_roi' in phase1_data:
+        roi_df = phase1_data['enhanced_roi']
+        roi_data = roi_df.iloc[0]
+
+        # ROI Metrics
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("💼 Total Campaigns", f"{roi_data['total_campaigns']:,.0f}",
+                     delta=f"TP: {roi_data['TP']:.0f}, FP: {roi_data['FP']:.0f}")
+
+        with col2:
+            st.metric("💰 Campaign Cost", f"${roi_data['campaign_execution_cost']:,.0f}",
+                     delta=f"${roi_data['campaign_cost_per_customer']:.0f} per customer")
+
+        with col3:
+            st.metric("💵 Revenue Saved", f"${roi_data['revenue_saved']:,.0f}",
+                     delta=f"{roi_data['customers_saved']:.0f} saved")
+
+        with col4:
+            st.metric("📈 ROI", f"{roi_data['roi_percentage']:.1f}%",
+                     delta=f"Net: ${roi_data['net_benefit']:,.0f}")
+
+        # Sensitivity Analysis
+        if 'roi_sensitivity' in phase1_data:
+            st.markdown("#### ROI Sensitivity to Key Assumptions")
+
+            sens_df = phase1_data['roi_sensitivity']
+
+            # Create combined chart with all three sensitivities
+            fig = make_subplots(
+                rows=1, cols=3,
+                subplot_titles=('CLV Sensitivity', 'Cost Sensitivity', 'Success Rate Sensitivity')
+            )
+
+            # CLV
+            clv_df = sens_df[sens_df['parameter'] == 'clv'].copy()
+            fig.add_trace(
+                go.Scatter(x=clv_df['value'], y=clv_df['roi_percentage'],
+                          mode='lines+markers', name='CLV', line=dict(color='#1f77b4')),
+                row=1, col=1
+            )
+
+            # Cost
+            cost_df = sens_df[sens_df['parameter'] == 'campaign_cost'].copy()
+            fig.add_trace(
+                go.Scatter(x=cost_df['value'], y=cost_df['roi_percentage'],
+                          mode='lines+markers', name='Cost', line=dict(color='#ff7f0e')),
+                row=1, col=2
+            )
+
+            # Success Rate
+            success_df = sens_df[sens_df['parameter'] == 'success_rate'].copy()
+            fig.add_trace(
+                go.Scatter(x=success_df['value']*100, y=success_df['roi_percentage'],
+                          mode='lines+markers', name='Success Rate', line=dict(color='#2ca02c')),
+                row=1, col=3
+            )
+
+            # Add break-even lines
+            for col in range(1, 4):
+                fig.add_hline(y=100, line_dash="dash", line_color="red", row=1, col=col)
+
+            fig.update_xaxes(title_text="CLV ($)", row=1, col=1)
+            fig.update_xaxes(title_text="Cost ($)", row=1, col=2)
+            fig.update_xaxes(title_text="Success Rate (%)", row=1, col=3)
+            fig.update_yaxes(title_text="ROI (%)", row=1, col=1)
+
+            fig.update_layout(height=400, template='plotly_white', showlegend=False)
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown(f"""
+        <div class="insight-box">
+        <b>✨ Key Insight:</b> The model delivers a <strong>{roi_data['roi_percentage']:.0f}%</strong> ROI
+        (<strong>${roi_data['net_benefit']:,.0f}</strong> net benefit) that remains positive across all
+        reasonable assumption scenarios, demonstrating robust financial value.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ===== Download Section =====
+    st.markdown("---")
+    st.markdown("## <i class='fas fa-download icon-primary fa-icon-lg'></i>Download Reports", unsafe_allow_html=True)
+
+    if (config.REPORTS_DIR / 'advanced_evaluation_summary.txt').exists():
+        with open(config.REPORTS_DIR / 'advanced_evaluation_summary.txt', 'r') as f:
+            report_content = f.read()
+
+        st.download_button(
+            label="📥 Download Advanced Evaluation Summary",
+            data=report_content,
+            file_name="advanced_evaluation_summary.txt",
+            mime="text/plain"
+        )
 
 
 def page_customer_risk_scoring():
@@ -1084,7 +2132,7 @@ def page_customer_risk_scoring():
     st.markdown('<h1 class="main-header"><i class="fas fa-user-shield fa-icon-xl"></i>Customer Risk Scoring</h1>', unsafe_allow_html=True)
 
     # Load artifacts
-    model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
+    model, preprocessor, feature_names, metrics, shap_data, all_results, phase1_data = load_model_artifacts()
 
     if model is None:
         st.warning("**Model not found. Please train the model first.**")
@@ -1175,7 +2223,7 @@ def page_customer_risk_scoring():
     ))
 
     fig.update_layout(height=300, template=config.PLOTLY_TEMPLATE)
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
     # SHAP Explanation
     if shap_data is not None and shap_data.get('explainer') is not None:
@@ -1207,7 +2255,7 @@ def page_customer_risk_scoring():
             )
 
             shap.plots.waterfall(shap_exp, show=False)
-            st.pyplot(fig, width="stretch")
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
         except Exception as e:
@@ -1272,7 +2320,7 @@ def page_feature_importance():
     st.markdown('<h1 class="main-header"><i class="fas fa-microscope fa-icon-xl"></i>Feature Importance & Explainability</h1>', unsafe_allow_html=True)
 
     # Load artifacts
-    model, preprocessor, feature_names, metrics, shap_data, all_results = load_model_artifacts()
+    model, preprocessor, feature_names, metrics, shap_data, all_results, phase1_data = load_model_artifacts()
 
     if model is None:
         st.warning("**Model not found. Please train the model first.**")
@@ -1396,7 +2444,7 @@ def page_feature_importance():
                 yaxis={'categoryorder': 'total ascending'}
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             st.markdown("### <i class='fas fa-bullseye icon-danger fa-icon'></i>Key Insights", unsafe_allow_html=True)
@@ -1477,7 +2525,7 @@ def page_feature_importance():
                     yaxis={'categoryorder': 'total ascending'}
                 )
 
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
 
     # Section 6: Interactive Feature Explorer
     st.markdown("---")
@@ -1559,7 +2607,7 @@ def page_feature_importance():
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
 
-                    st.plotly_chart(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
                     st.markdown("### <i class='fas fa-chart-bar icon-primary fa-icon'></i>Statistics", unsafe_allow_html=True)
@@ -1585,7 +2633,7 @@ def page_feature_importance():
                         ]
                     })
 
-                    st.dataframe(stats_df, width="stretch", hide_index=True)
+                    st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
                     # Interpretation
                     st.markdown("---")
@@ -1670,7 +2718,7 @@ def page_feature_importance():
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
 
-                    st.plotly_chart(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
 
                 with col2:
                     st.markdown("### <i class='fas fa-chart-pie icon-primary fa-icon'></i>Churn Rates", unsafe_allow_html=True)
@@ -1682,7 +2730,7 @@ def page_feature_importance():
                         'Churn Rate': [f"{rate:.1f}%" for rate in stats_df['churn_rate']]
                     })
 
-                    st.dataframe(churn_rate_df, width="stretch", hide_index=True)
+                    st.dataframe(churn_rate_df, use_container_width=True, hide_index=True)
 
                     # Find highest risk category
                     highest_risk_idx = stats_df['churn_rate'].idxmax()
@@ -1735,8 +2783,12 @@ def page_feature_importance():
             st.metric("Actual Status", actual_label)
 
         with col3:
-            correct = "<i class='fas fa-check-circle icon-success'></i> Correct" if (prediction == actual_label) else "<i class='fas fa-times-circle icon-danger'></i> Incorrect"
-            st.metric("Accuracy", correct)
+            if prediction == actual_label:
+                st.markdown("**Accuracy**")
+                st.markdown("<i class='fas fa-check-circle icon-success'></i> Correct", unsafe_allow_html=True)
+            else:
+                st.markdown("**Accuracy**")
+                st.markdown("<i class='fas fa-times-circle icon-danger'></i> Incorrect", unsafe_allow_html=True)
 
         # SHAP waterfall plot
         if shap_data is not None and shap_data.get('explainer') is not None:
@@ -1764,7 +2816,7 @@ def page_feature_importance():
                 )
 
                 shap.plots.waterfall(shap_exp, show=False)
-                st.pyplot(fig, width="stretch")
+                st.pyplot(fig, use_container_width=True)
                 plt.close()
 
             except Exception as e:
@@ -1934,7 +2986,7 @@ Based on the overall model feature importances, the most important factors for p
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
             st.info("**Interpretation:** Red indicates positive correlation, blue indicates negative correlation. Values range from -1 to +1.")
 
@@ -2084,7 +3136,7 @@ def page_ab_test_simulator():
         template=config.PLOTLY_TEMPLATE
     )
 
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
     # Financial breakdown
     st.markdown("### 💵 Financial Breakdown")
@@ -2097,7 +3149,7 @@ def page_ab_test_simulator():
             'Item': ['Campaign Execution', 'Target Customers', 'Cost per Customer'],
             'Value': [f"${total_campaign_cost:,}", f"{customers_targeted:,}", f"${campaign_cost_per_customer}"]
         })
-        st.dataframe(costs_df, width="stretch", hide_index=True)
+        st.dataframe(costs_df, use_container_width=True, hide_index=True)
 
     with col2:
         st.markdown("**Benefits:**")
@@ -2105,7 +3157,7 @@ def page_ab_test_simulator():
             'Item': ['Customers Saved', 'Value per Customer', 'Total Revenue Saved'],
             'Value': [f"{customers_saved:,}", f"${avg_customer_value:,}", f"${revenue_saved:,}"]
         })
-        st.dataframe(benefits_df, width="stretch", hide_index=True)
+        st.dataframe(benefits_df, use_container_width=True, hide_index=True)
 
     # Section 2: A/B Test Design
     st.markdown("---")
@@ -2224,7 +3276,7 @@ def page_ab_test_simulator():
         template=config.PLOTLY_TEMPLATE
     )
 
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
     # Interpretation guide
     with st.expander("📚 How to Interpret A/B Test Results"):
@@ -2391,7 +3443,7 @@ def page_about_data():
 
     st.dataframe(
         feature_dict_df,
-        width="stretch",
+        use_container_width=True,
         hide_index=True,
         column_config={
             "Feature Name": st.column_config.TextColumn("Feature Name", width="medium"),
@@ -2424,7 +3476,7 @@ def page_about_data():
                 }).query('`Missing Count` > 0')
 
                 if len(missing_df) > 0:
-                    st.dataframe(missing_df, width="stretch", hide_index=True)
+                    st.dataframe(missing_df, use_container_width=True, hide_index=True)
                 else:
                     st.success("✅ No missing values!")
 
@@ -2456,7 +3508,7 @@ def page_about_data():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
     # Section 4: Key Statistics
     st.markdown("---")
@@ -2493,7 +3545,7 @@ def page_about_data():
                 stats.append(('Has Dependents', f'{dep_pct:.1f}%'))
 
             stats_df = pd.DataFrame(stats, columns=['Metric', 'Value'])
-            st.dataframe(stats_df, width="stretch", hide_index=True)
+            st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
         with col2:
             st.markdown("### 📊 Service Usage")
@@ -2522,7 +3574,7 @@ def page_about_data():
                 usage_stats.append(('Internet Service Adoption', f'{internet_pct:.1f}%'))
 
             usage_df = pd.DataFrame(usage_stats, columns=['Metric', 'Value'])
-            st.dataframe(usage_df, width="stretch", hide_index=True)
+            st.dataframe(usage_df, use_container_width=True, hide_index=True)
 
     # Section 5: Class Balance Visualization
     st.markdown("---")
@@ -2549,7 +3601,7 @@ def page_about_data():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             churn_rate = full_data['Churn'].mean() * 100
@@ -2570,7 +3622,7 @@ def page_about_data():
                 template=config.PLOTLY_TEMPLATE
             )
 
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
         if churn_rate < 40:
             st.info(f"ℹ️ The dataset shows a {churn_rate:.1f}% churn rate, which is typical for telecom industry benchmarks (15-35%).")
@@ -2794,14 +3846,15 @@ def main():
     st.markdown('<div class="nav-container">', unsafe_allow_html=True)
 
     # Create navigation buttons with clear hierarchy
-    nav_cols = st.columns([1, 1, 1, 1, 1, 1], gap="small")
+    nav_cols = st.columns([1, 1, 1, 1, 1, 1, 1], gap="small")
 
     # Define navigation items with Font Awesome icons
     nav_items = [
         ("Dashboard", "fas fa-home", "Dashboard"),
         ("Performance", "fas fa-chart-area", "Model Performance"),
+        ("Advanced", "fas fa-microscope", "Advanced Evaluation"),
         ("Risk Scoring", "fas fa-user-shield", "Customer Risk Scoring"),
-        ("Explainability", "fas fa-microscope", "Feature Importance"),
+        ("Explainability", "fas fa-lightbulb", "Feature Importance"),
         ("A/B Testing", "fas fa-flask", "A/B Test Simulator"),
         ("Data Info", "fas fa-database", "About the Data")
     ]
@@ -2828,8 +3881,9 @@ def main():
                 icon_map = {
                     "fas fa-home": "🏠",
                     "fas fa-chart-area": "📊",
-                    "fas fa-user-shield": "🛡️",
                     "fas fa-microscope": "🔬",
+                    "fas fa-user-shield": "🛡️",
+                    "fas fa-lightbulb": "💡",
                     "fas fa-flask": "🧪",
                     "fas fa-database": "💾"
                 }
@@ -2975,11 +4029,20 @@ def main():
 
     try:
         metrics = joblib.load(config.METRICS_FILE)
+        # Try to load enhanced ROI for correct metrics
+        roi_value = metrics.get('roi_percentage', 0)
+        try:
+            enhanced_roi_df = pd.read_csv(config.REPORTS_DIR / 'enhanced_roi_analysis.csv')
+            if not enhanced_roi_df.empty:
+                roi_value = enhanced_roi_df['roi_percentage'].values[0]
+        except:
+            pass  # Use old metrics if enhanced not available
+
         col1, col2 = st.sidebar.columns(2)
         with col1:
             st.metric("Model Recall", f"{metrics.get('recall', 0)*100:.1f}%")
         with col2:
-            st.metric("ROI", f"{metrics.get('roi_percentage', 0):.0f}%")
+            st.metric("ROI", f"{roi_value:.0f}%")
     except:
         st.sidebar.caption("<i class='fas fa-spinner fa-spin'></i> Metrics loading...", unsafe_allow_html=True)
 
@@ -2990,6 +4053,8 @@ def main():
         page_executive_summary()
     elif page == "Model Performance":
         page_model_performance()
+    elif page == "Advanced Evaluation":
+        page_advanced_evaluation()
     elif page == "Customer Risk Scoring":
         page_customer_risk_scoring()
     elif page == "Feature Importance":

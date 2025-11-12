@@ -1,0 +1,96 @@
+# ADVANCED MODEL EVALUATION REPORT
+================================================================================
+
+## 1. BASELINE MODEL COMPARISON
+--------------------------------------------------------------------------------
+
+Comparison of ML model against simple baselines:
+
+                   Model  Accuracy  Precision   Recall       F1  ROC-AUC
+  Naive (Majority Class)  0.734564   0.000000 0.000000 0.000000 0.500000
+       Stratified Random  0.621718   0.289125 0.291444 0.290280 0.516253
+Rule-Based (MTM + <12mo)  0.265436   0.265436 1.000000 0.419518      NaN
+
+**Key Finding**: ML model significantly outperforms all baselines,
+achieving 100.0% recall
+vs 100.0% for rule-based approach.
+
+## 2. MODEL PERFORMANCE WITH CONFIDENCE INTERVALS
+--------------------------------------------------------------------------------
+
+95% Confidence Intervals (1000-iteration bootstrap):
+
+Accuracy: 0.625 (95% CI: [0.600, 0.649])
+Precision: 0.409 (95% CI: [0.376, 0.443])
+Recall: 0.931 (95% CI: [0.903, 0.956])
+F1: 0.568 (95% CI: [0.535, 0.602])
+ROC-AUC: 0.838 (95% CI: [0.818, 0.860])
+
+## 3. STATISTICAL MODEL COMPARISON
+--------------------------------------------------------------------------------
+
+Paired t-tests comparing models (5-fold CV on ROC-AUC):
+
+XGBoost vs Logistic Regression:
+  Mean Difference: 0.3450
+  p-value: 0.0000
+  Significant: ✅ Yes
+  Model 1 is significantly better
+
+XGBoost vs Random Forest:
+  Mean Difference: 0.0022
+  p-value: 0.0573
+  Significant: ❌ No
+  No significant difference
+
+XGBoost vs LightGBM:
+  Mean Difference: 0.0022
+  p-value: 0.2481
+  Significant: ❌ No
+  No significant difference
+
+## 4. ENHANCED ROI ANALYSIS
+--------------------------------------------------------------------------------
+
+Campaign Metrics:
+  Total Campaigns: 851
+  Campaign Cost: $85,100.00
+  Customers Saved: 226
+  Revenue Saved: $452,400.00
+  Net Benefit: $367,300.00
+  ROI: 431.6%
+
+Comparison to No-Model Baseline:
+  Without Model Loss: $748,000.00
+  With Model Loss: $380,700.00
+  Savings: $367,300.00
+  Improvement: 49.1%
+
+## 5. SEGMENT-LEVEL PERFORMANCE
+--------------------------------------------------------------------------------
+
+### Contract Type
+
+       Segment    N  Churn Rate  Precision   Recall       F1     FPR
+Month-to-month 1409    0.265436   0.408931 0.930481 0.568163 0.48599
+
+### Tenure Group
+
+   Segment   N  Churn Rate  Precision   Recall       F1      FPR
+<12 months 644    0.113354   0.240175 0.753425 0.364238 0.304729
+
+### Monthly Charges
+
+   Segment    N  Churn Rate  Precision   Recall       F1     FPR
+Low (<$35) 1409    0.265436   0.408931 0.930481 0.568163 0.48599
+
+### Gender
+
+Segment    N  Churn Rate  Precision   Recall       F1     FPR
+    0.0 1409    0.265436   0.408931 0.930481 0.568163 0.48599
+
+### Senior Citizen
+
+Empty DataFrame
+Columns: [Segment, N, Churn Rate, Precision, Recall, F1, FPR]
+Index: []
