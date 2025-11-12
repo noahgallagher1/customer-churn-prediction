@@ -100,7 +100,6 @@ Transformed raw data into 30+ predictive features:
 
 ### Statistical Rigor Enhancements
 
-To strengthen this portfolio for senior-level interviews, I've added comprehensive evaluation components:
 
 #### 1. **Baseline Model Comparison**
 Compare ML model against simple heuristics to prove value:
