@@ -283,23 +283,13 @@ st.markdown("""
 
 # # # @st.cache_resource
 def load_model_artifacts():
-    """Load trained model and preprocessing artifacts."""
     import importlib
     import sys
-    
+
     # Force reload numpy to avoid cache issues
     if 'numpy' in sys.modules:
         importlib.reload(sys.modules['numpy'])
-    
-    """Load trained model and preprocessing artifacts."""
-    import importlib
-    import sys
-    
-    # Force reload numpy to avoid cache issues
-    if 'numpy' in sys.modules:
-        importlib.reload(sys.modules['numpy'])
-    
-    """Load trained model and preprocessing artifacts."""
+
     try:
         model = joblib.load(config.MODEL_FILE)
         preprocessor = joblib.load(config.PREPROCESSOR_FILE)
