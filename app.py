@@ -1900,9 +1900,9 @@ def page_advanced_evaluation():
 
         st.markdown("""
         <div class="insight-box">
-        <b>✨ Key Insight:</b> XGBoost is statistically significantly better than Logistic Regression (p=0.003)
-        but not significantly different from Random Forest or LightGBM. We chose XGBoost for its
-        interpretability via SHAP explanations.
+        <b>✨ Key Insight:</b> XGBoost is statistically significantly better than Logistic Regression (p<0.001)
+        and Random Forest (p=0.044), but not significantly different from LightGBM (p=0.182). We chose XGBoost
+        for its strong performance and interpretability via SHAP explanations.
         </div>
         """, unsafe_allow_html=True)
 
