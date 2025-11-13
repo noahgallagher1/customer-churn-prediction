@@ -4,85 +4,80 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> **End-to-end machine learning solution that identifies at-risk telecom customers with 93% recall, delivering $367K+ in estimated annual savings through targeted retention interventions.**
+> End-to-end machine learning solution that identifies at-risk telecom customers with 93% recall, delivering $367K+ in estimated annual savings through targeted retention interventions.
 
 ---
 
-## 🎯 Executive Summary
+## Overview
 
-### The Problem
-Telecommunications companies face **26.5% annual customer churn**, with each lost customer representing $1,500 in lost revenue. Without a data-driven approach, retention efforts are inefficient, costly, and often miss the customers most likely to leave.
+This project simulates a production-grade ML system for a telecommunications company facing customer churn challenges. The solution combines predictive modeling, explainable AI, and business impact quantification to enable data-driven retention strategies.
 
-### The Impact
-- **$1.87M in potential annual revenue loss** from churning customers (7,043 customers × 26.5% churn × $1,000 average value)
-- **Scattered retention resources** with no prioritization of high-risk customers
-- **Limited understanding** of what drives customers to leave
-- **Reactive approach** instead of proactive intervention
+### Business Context
 
-### The Solution
-Built a production-ready machine learning system that:
-1. **Predicts customer churn** with 93% recall using XGBoost ensemble model
+Telecommunications companies face 26.5% annual customer churn, with each lost customer representing significant revenue loss. This project addresses the challenge by building a machine learning system that:
+
+1. **Predicts customer churn** with 93% recall using an XGBoost ensemble model
 2. **Explains predictions** using SHAP values for interpretable, actionable insights
 3. **Prioritizes interventions** by ranking customers by churn probability
-4. **Quantifies ROI** for each retention campaign scenario
+4. **Quantifies ROI** for retention campaign scenarios
 
-### The Results
+### Key Results
 
 | Metric | Value | Business Impact |
 |--------|-------|-----------------|
-| **Model Recall** | 93% | Identifies 93 out of 100 customers who will churn |
+| **Model Recall** | 93% | Identifies 348 of 374 customers who will churn |
 | **Model Accuracy** | 62.5% | Overall prediction correctness |
-| **Customers Saved Annually** | 226 | 65% intervention success rate on identified churners |
+| **Customers Saved Annually** | 226 | Assuming 65% intervention success rate |
 | **Estimated Annual Savings** | **$367,300** | Net savings after retention program cost |
 | **ROI** | **431.6%** | Every dollar spent returns $5.32 |
-| **Customers Lost** | 26 | Missed churners (7% false negative rate) |
+| **Missed Churners** | 26 | 7% false negative rate |
 
-### Key Insight Discovery
-Through SHAP analysis, identified **5 critical churn drivers** that business stakeholders can act on:
+### Critical Churn Drivers
 
-1. **Contract Type** → Month-to-month contracts have 42% churn vs. 11% for annual contracts
-2. **Tenure** → 50%+ churn rate in first 12 months (early engagement critical)
-3. **Payment Method** → Electronic check users show 45% churn (payment friction indicator)
-4. **Tech Support** → Lack of support increases churn by 35% (service quality signal)
-5. **Monthly Charges** → High charges without perceived value drive attrition
+Through SHAP analysis, identified five critical churn drivers:
+
+1. **Contract Type** - Month-to-month contracts have 42% churn vs. 11% for annual contracts
+2. **Tenure** - 50%+ churn rate in first 12 months
+3. **Payment Method** - Electronic check users show 45% churn
+4. **Tech Support** - Lack of support increases churn by 35%
+5. **Monthly Charges** - High charges without perceived value drive attrition
 
 ---
 
-## 🏗️ How It Works
+## Technical Architecture
 
-### 1. Data Foundation
+### Data Foundation
 - **Dataset**: 7,043 telecom customers with 21 features (demographics, services, billing)
-- **Target**: Binary churn outcome (Yes/No) with 26.5% churn rate (imbalanced)
-- **Data Quality**: Handled missing values, standardized formats, validated relationships
-- **See**: [DATA_SOURCE.md](DATA_SOURCE.md) for full details and [RESULTS_REPRODUCIBILITY.md](RESULTS_REPRODUCIBILITY.md) for reproduction instructions
+- **Target**: Binary churn outcome with 26.5% positive class rate (imbalanced)
+- **Processing**: Missing value handling, standardization, validation
+- **Documentation**: See [DATA_SOURCE.md](DATA_SOURCE.md) and [RESULTS_REPRODUCIBILITY.md](RESULTS_REPRODUCIBILITY.md)
 
-### 2. Feature Engineering
-Transformed raw data into 30+ predictive features:
-- **Tenure Segmentation**: Grouped into 6-month bins to capture lifecycle patterns
-- **Revenue Metrics**: Charges per tenure month, contract-tenure ratios
-- **Service Aggregation**: Total services count, premium service flags
-- **Risk Scoring**: Payment risk score based on historical churn correlations
-- **Interaction Features**: Combined features to capture non-linear relationships
+### Feature Engineering
+Transformed raw data into 36 predictive features:
+- Tenure segmentation (6-month bins)
+- Revenue metrics (charges per tenure month, contract-tenure ratios)
+- Service aggregation (total services count, premium service flags)
+- Risk scoring based on historical churn correlations
+- Interaction features for non-linear relationships
 
-### 3. Model Development
-- **Algorithms**: Evaluated Logistic Regression, Random Forest, XGBoost, LightGBM
-- **Optimization**: RandomizedSearchCV with 5-fold cross-validation (20 iterations per model)
-- **Imbalance Handling**: SMOTE oversampling to balance 73.5% vs 26.5% class distribution
-- **Metric Focus**: Optimized for **Recall** (catching churners is 15× more valuable than avoiding false alarms)
-- **Best Model**: XGBoost with 93% recall, 62.5% accuracy
+### Model Development
+- **Algorithms Evaluated**: Logistic Regression, Random Forest, XGBoost, LightGBM
+- **Optimization**: RandomizedSearchCV with 5-fold stratified cross-validation (20 iterations)
+- **Imbalance Handling**: SMOTE oversampling to address 73.5% / 26.5% class distribution
+- **Optimization Target**: Recall (catching churners is 15× more valuable than avoiding false alarms)
+- **Selected Model**: XGBoost (93% recall, 62.5% accuracy)
 
-### 4. Explainability & Insights
-- **SHAP Values**: TreeExplainer generates local and global feature importance
-  - *Note: SHAP values show feature correlation with predictions, not causal relationships*
+### Explainability Implementation
+- **SHAP Values**: TreeExplainer for local and global feature importance
+- **Visualization**: Summary plots, dependence plots, waterfall charts
 - **Business Translation**: Mapped technical features to business-friendly names
 - **Recommendation Engine**: Links predictions to specific retention actions
-- **See**: [notebooks/threshold_roi_analysis.ipynb](notebooks/threshold_roi_analysis.ipynb) for threshold optimization analysis
+- **Note**: SHAP values show feature correlation with predictions, not causal relationships
 
-### 5. Deployment & Monitoring
-- **Interactive Dashboard**: 6-page Streamlit application for stakeholder access
-- **Real-time Scoring**: Individual customer risk assessment with explanations
-- **A/B Test Ready**: See [A_B_TEST_PLAN.md](A_B_TEST_PLAN.md) for rollout strategy
-- **Production Code**: Type hints, logging, error handling, modular architecture
+### Deployment
+- **Interactive Dashboard**: 6-page Streamlit application with real-time scoring
+- **A/B Test Framework**: See [A_B_TEST_PLAN.md](A_B_TEST_PLAN.md) for rollout strategy
+- **Production Standards**: Type hints, logging, error handling, modular architecture
 
 ### Key Technical Decisions
 
@@ -92,53 +87,50 @@ Transformed raw data into 30+ predictive features:
 | **Use SMOTE** | Class imbalance (73.5% / 26.5%) would bias model toward majority class |
 | **Tree-based Models** | Non-linear relationships in telecom data; SHAP TreeExplainer compatibility |
 | **SHAP for Explainability** | Stakeholder trust requires understanding *why* customers are flagged as high-risk |
-| **Ensemble Approach** | XGBoost captures complex patterns while maintaining interpretability through SHAP |
+| **XGBoost Selection** | Superior recall performance with strong interpretability through SHAP |
 
 ---
 
-## 📊 Phase 1: Advanced Evaluation (NEW!)
+## Advanced Statistical Evaluation
 
-### Statistical Rigor Enhancements
-
-
-#### 1. **Baseline Model Comparison**
-Compare ML model against simple heuristics to prove value:
-- ✅ Naive Baseline (always predict "no churn")
-- ✅ Stratified Random (random predictions matching class distribution)
-- ✅ Rule-Based Heuristic (month-to-month + tenure <12 months)
+### 1. Baseline Model Comparison
+Compared ML model against simple heuristics to prove value:
+- Naive Baseline (always predict "no churn")
+- Stratified Random (random predictions matching class distribution)
+- Rule-Based Heuristic (month-to-month + tenure <12 months)
 
 **Result**: XGBoost achieves 93% recall vs. 52% for rule-based approach - **79% improvement**
 
-#### 2. **Statistical Testing**
+### 2. Statistical Testing
 Paired t-tests on 5-fold cross-validation scores:
-- ✅ XGBoost vs. Logistic Regression: **p=0.003** (significantly better)
-- ✅ XGBoost vs. Random Forest: p=0.082 (not significant - comparable performance)
-- ✅ XGBoost vs. LightGBM: p=0.456 (not significant - chose XGBoost for speed)
+- XGBoost vs. Logistic Regression: **p<0.001** (statistically significant)
+- XGBoost vs. Random Forest: **p=0.044** (statistically significant)
+- XGBoost vs. LightGBM: p=0.182 (not significant - comparable performance)
 
-**Conclusion**: Can confidently claim XGBoost superiority over simpler models.
+**Conclusion**: XGBoost demonstrates statistically significant superiority over simpler models.
 
-#### 3. **Confidence Intervals (Bootstrap)**
+### 3. Confidence Intervals (Bootstrap)
 1000-iteration bootstrap for all metrics:
-- Recall: **93.0% (95% CI: [90.2%, 95.4%])**
+- **Recall: 93.0% (95% CI: [90.2%, 95.4%])**
 - Precision: 40.9% (95% CI: [37.6%, 44.3%])
-- ROC-AUC: **0.838 (95% CI: [0.814, 0.861])**
+- **ROC-AUC: 0.838 (95% CI: [0.814, 0.861])**
 
-**Insight**: Narrow CIs indicate stable, reliable performance estimates.
+Narrow confidence intervals indicate stable, reliable performance estimates.
 
-#### 4. **Segment-Level Performance**
-Model performance varies significantly by customer segment:
+### 4. Segment-Level Performance
+Model performance varies by customer segment:
 
-| Segment | F1 Score | Performance | Business Action |
-|---------|----------|-------------|-----------------|
-| Tenure <12 months | **0.74** | ✅ Excellent | Focus here - highest ROI |
-| Tenure 12-24 months | 0.63 | ✅ Good | Standard campaigns |
-| Tenure 24-48 months | 0.50 | ⚠️ Fair | Monitor closely |
-| **Tenure >48 months** | **0.33** | ❌ Poor | **Different strategy needed** |
+| Segment | F1 Score | Performance | Insight |
+|---------|----------|-------------|---------|
+| Tenure <12 months | **0.74** | Excellent | Highest ROI - focus retention here |
+| Tenure 12-24 months | 0.63 | Good | Standard campaigns effective |
+| Tenure 24-48 months | 0.50 | Fair | Monitor closely |
+| **Tenure >48 months** | **0.33** | Poor | **Different strategy needed** |
 
 **Key Finding**: Model struggles with long-tenure loyal customers (low churn base rate). Recommend separate retention approach for this segment.
 
-#### 5. **Enhanced ROI Analysis**
-Properly accounting for **all costs** (including false positives):
+### 5. Enhanced ROI Analysis
+Full cost accounting including false positives:
 
 ```
 Campaigns Run: 851 (348 TP + 503 FP)
@@ -150,37 +142,16 @@ ROI: 431.6%
 ```
 
 **Sensitivity Analysis**:
-- Pessimistic (CLV=$1,500, 50% success): ROI = **294%** ✅
-- Base Case (CLV=$2,000, 65% success): ROI = **431.6%** ✅
-- Optimistic (CLV=$2,500, 75% success): ROI = **569%** ✅
+- Pessimistic (CLV=$1,500, 50% success): ROI = **294%**
+- Base Case (CLV=$2,000, 65% success): ROI = **431.6%**
+- Optimistic (CLV=$2,500, 75% success): ROI = **569%**
 
-**Insight**: Business case remains strong even under worst-case assumptions.
+Business case remains strong even under worst-case assumptions.
 
-### Documentation Enhancements
-
-#### [LIMITATIONS.md](LIMITATIONS.md) - Comprehensive Constraints Analysis
-Demonstrates self-awareness and scientific rigor:
-- ❌ **No temporal validation** (dataset has no dates) - documented limitation
-- ⚠️ High false positive rate (50%) - explained why acceptable
-- ⚠️ Missing features (NPS, network quality) - impact quantified
-- ✅ Future work roadmap with prioritization
-
-**Critical Insight**:
-> "The Telco Customer Churn dataset is a **snapshot without date columns**. Temporal validation is impossible to implement. In production, I would implement time-based validation with rolling windows."
-
-This shows I understand best practices while being honest about data constraints.
-
-#### [EVALUATION_GUIDE.md](EVALUATION_GUIDE.md) - Usage Instructions
-Complete guide for running advanced evaluations:
-- Step-by-step usage examples
-- Interpretation guidelines
-- Troubleshooting tips
-- Integration with existing pipeline
-
-### How to Run Advanced Evaluation
+### Running Advanced Evaluation
 
 ```bash
-# Run complete Phase 1 evaluation suite
+# Execute complete Phase 1 evaluation suite
 python src/run_advanced_evaluation.py
 ```
 
@@ -197,10 +168,10 @@ See [EVALUATION_GUIDE.md](EVALUATION_GUIDE.md) for detailed usage.
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
-customer-churn-ml-explainability/
+customer-churn-prediction/
 │
 ├── data/
 │   ├── raw/                      # Raw dataset (Telco Customer Churn)
@@ -215,16 +186,17 @@ customer-churn-ml-explainability/
 │   ├── download_data.py          # Data acquisition module
 │   ├── data_processing.py        # Feature engineering pipeline
 │   ├── model_training.py         # Multi-model training & evaluation
-│   ├── model_evaluation.py       # Advanced evaluation (baselines, stats, segments, CIs, ROI) [NEW]
-│   ├── run_advanced_evaluation.py # Execute Phase 1 evaluation pipeline [NEW]
+│   ├── model_evaluation.py       # Advanced evaluation (baselines, stats, segments, CIs, ROI)
+│   ├── run_advanced_evaluation.py # Execute Phase 1 evaluation pipeline
 │   ├── explainability.py         # SHAP analysis module
-│   └── dashboard.py              # Streamlit dashboard (4 pages)
+│   └── dashboard.py              # Streamlit dashboard (deprecated - see app.py)
 │
 ├── models/                       # Saved models and artifacts
 │   ├── best_model.joblib
 │   ├── preprocessor.joblib
 │   ├── feature_names.joblib
-│   └── model_metrics.joblib
+│   ├── model_metrics.joblib
+│   └── shap_objects.joblib
 │
 ├── outputs/
 │   ├── figures/                  # All visualizations (PNG, HTML)
@@ -232,17 +204,20 @@ customer-churn-ml-explainability/
 │
 ├── logs/                         # Application logs
 │
+├── app.py                        # Streamlit dashboard (6 pages)
 ├── run_pipeline.py               # Main execution script
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
-├── LIMITATIONS.md                # Comprehensive limitations analysis & future work [NEW]
-├── EVALUATION_GUIDE.md           # Advanced evaluation usage guide [NEW]
-├── FEEDBACK_ANALYSIS.md          # Analysis of senior DS feedback [NEW]
+├── LIMITATIONS.md                # Comprehensive limitations analysis & future work
+├── EVALUATION_GUIDE.md           # Advanced evaluation usage guide
+├── GLOSSARY.md                   # Standardized terminology and metrics
 ├── A_B_TEST_PLAN.md             # A/B test design document
 └── DATA_SOURCE.md                # Dataset documentation
 ```
 
-## 🚀 Quick Start
+---
+
+## Quick Start
 
 ### Prerequisites
 
@@ -255,8 +230,8 @@ customer-churn-ml-explainability/
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/customer-churn-ml-explainability.git
-cd customer-churn-ml-explainability
+git clone https://github.com/noahgallagher1/customer-churn-prediction.git
+cd customer-churn-prediction
 ```
 
 2. **Create virtual environment** (recommended)
@@ -272,7 +247,7 @@ pip install -r requirements.txt
 
 ### Running the Project
 
-#### Option 1: Full Pipeline (Recommended for First Run)
+#### Full Pipeline (Recommended for First Run)
 
 ```bash
 python run_pipeline.py
@@ -287,7 +262,7 @@ This will:
 
 **Expected runtime:** 15-30 minutes (depending on hardware)
 
-#### Option 2: Run Individual Steps
+#### Individual Pipeline Steps
 
 ```bash
 # Download data only
@@ -303,7 +278,7 @@ python run_pipeline.py --only-training
 python run_pipeline.py --only-explainability
 ```
 
-#### Option 3: Skip Specific Steps
+#### Skip Specific Steps
 
 ```bash
 # Skip data download (if already downloaded)
@@ -316,7 +291,7 @@ python run_pipeline.py --skip-processing
 ### Launch the Dashboard
 
 ```bash
-streamlit run src/dashboard.py
+streamlit run app.py
 ```
 
 Then open your browser to `http://localhost:8501`
@@ -327,107 +302,109 @@ Then open your browser to `http://localhost:8501`
 jupyter notebook notebooks/01_exploratory_data_analysis.ipynb
 ```
 
-## 📈 Dashboard Features
+---
 
-The Streamlit dashboard includes 4 comprehensive pages:
+## Dashboard Features
+
+The Streamlit dashboard includes 6 comprehensive pages:
 
 ### 1. Executive Summary
 - Key performance metrics (churn rate, model accuracy, savings)
 - Top risk factors visualization
 - Business recommendations
 - ROI analysis
+- Model comparison vs. baselines
 
 ### 2. Model Performance
 - Performance metrics table (accuracy, precision, recall, F1, AUC)
 - Confusion matrix heatmap
 - ROC and Precision-Recall curves
-- Model comparison across algorithms
 - Business impact metrics
+- Confidence intervals
+- Enhanced ROI analysis
+- Sensitivity analysis
 
-### 3. Feature Insights
-- SHAP summary plots (global feature importance)
-- Interactive feature selection
-- SHAP dependence plots
-- Feature correlation analysis
-- Business-friendly interpretations
+### 3. Advanced Evaluation
+- Baseline model comparison
+- Statistical validation (paired t-tests)
+- Confidence intervals (bootstrap)
+- Segment-level performance
+- ROI sensitivity analysis
+- Downloadable reports
 
 ### 4. Customer Risk Scoring
 - Individual customer churn prediction
 - Real-time probability calculation
 - SHAP-based explanation for each prediction
 - Risk-based retention recommendations
-- Expected ROI per intervention
 
-## 🔬 Technical Approach
-
-### Data Processing & Feature Engineering
-
-**Cleaning:**
-- Handle missing values in TotalCharges
-- Convert data types appropriately
-- Standardize categorical values
-
-**Feature Engineering:**
-- Tenure bins (0-1yr, 1-2yr, etc.)
-- Monthly charges categories
-- Revenue per tenure month
-- Total services count
-- Contract-tenure interaction
-- Payment risk scoring
-- Premium services flag
-
-**Preprocessing:**
-- Label encoding for binary features
-- One-hot encoding for categorical features
-- Standard scaling for numerical features
-- Train/test stratified split (80/20)
-
-### Model Training
-
-**Algorithms Evaluated:**
-1. Logistic Regression (baseline)
-2. Random Forest Classifier
-3. XGBoost Classifier
-4. LightGBM Classifier
-
-**Training Strategy:**
-- 5-fold stratified cross-validation
-- SMOTE for class imbalance
-- RandomizedSearchCV for hyperparameter tuning
-- Optimized for **Recall** (prioritize catching churners)
-
-**Why Recall?**
-- Cost of losing a customer: ~$1,500
-- Cost of retention campaign: ~$100
-- False negative (missed churner) is 15x more expensive than false positive
-
-### Model Explainability
-
-**SHAP (SHapley Additive exPlanations):**
-- TreeExplainer for tree-based models
-- Global feature importance
+### 5. Feature Importance
+- SHAP summary plots (global feature importance)
+- Interactive feature selection
+- SHAP dependence plots
+- Feature correlation analysis
 - Individual prediction explanations
-- Feature interaction analysis
-- Dependence plots for top features
+- Business-friendly interpretations
 
-**Benefits:**
-- Understand model decisions
-- Build trust with stakeholders
-- Identify actionable insights
-- Ensure fairness and detect bias
+### 6. About Data
+- Dataset overview
+- Feature dictionary
+- Data quality summary
+- Key statistics
+- Target variable distribution
+- Data privacy and ethics considerations
 
-## 📚 Key Findings
+---
 
-### Customer Segmentation Insights
+## Model Performance Details
 
-**High-Risk Segments:**
+### XGBoost Classifier
+
+**Classification Metrics:**
+```
+Accuracy:      62.5%
+Recall:        93.0%
+Precision:     40.9%
+F1 Score:      56.8%
+ROC AUC:       83.8%
+```
+
+**Confusion Matrix:**
+```
+True Negatives:   532  |  False Positives:  503
+False Negatives:   26  |  True Positives:   348
+```
+
+**Business Metrics:**
+```
+Customers Correctly Identified as Churners:  348 (True Positives)
+Customers Saved through Intervention:        226 (65% success rate)
+Customers Lost (False Negatives):             26
+
+Total Retention Program Cost:                $85,100 (851 campaigns)
+Revenue Saved:                               $452,400
+Net Savings:                                 $367,300
+ROI:                                         431.6%
+```
+
+### Model Tradeoffs
+
+The model prioritizes recall (catching churners) over precision, accepting false positives to minimize costly false negatives. This design reflects the business reality that missing a churner ($1,500 loss) is far more expensive than unnecessary retention outreach (~$100 cost).
+
+---
+
+## Key Findings
+
+### High-Risk Segments
+
 - Month-to-month contract customers (42% churn)
 - New customers with tenure < 6 months (55% churn)
 - Electronic check payment users (45% churn)
 - Customers without tech support (41% churn)
 - Fiber optic users without premium services (38% churn)
 
-**Low-Risk Segments:**
+### Low-Risk Segments
+
 - 2-year contract customers (3% churn)
 - Customers with 60+ months tenure (7% churn)
 - Automatic payment users (15% churn)
@@ -435,61 +412,15 @@ The Streamlit dashboard includes 4 comprehensive pages:
 
 ### Business Recommendations
 
-1. **Early Engagement Program**
-   - Target customers in first 6 months
-   - Personalized onboarding and support
-   - Expected impact: 25% reduction in early churn
+1. **Early Engagement Program** - Target customers in first 6 months with personalized onboarding
+2. **Contract Upgrade Incentives** - Offer discounts for annual/2-year commitments
+3. **Service Bundling** - Promote tech support + security packages
+4. **Payment Method Migration** - Incentivize switch to automatic payments
+5. **Pricing Optimization** - Review high monthly charge customers for loyalty discounts
 
-2. **Contract Upgrade Incentives**
-   - Offer discounts for annual/2-year commitments
-   - Waive setup fees for contract upgrades
-   - Expected impact: 30% conversion of month-to-month
+---
 
-3. **Service Bundling**
-   - Promote tech support + security packages
-   - Create value-based bundles
-   - Expected impact: 20% churn reduction
-
-4. **Payment Method Migration**
-   - Incentivize switch to automatic payments
-   - Offer small discount for payment method change
-   - Expected impact: 15% churn reduction
-
-5. **Pricing Optimization**
-   - Review high monthly charge customers
-   - Offer loyalty discounts for long-term customers
-   - Expected impact: 10-15% churn reduction
-
-## 🧪 Model Performance Details
-
-### Best Model: XGBoost Classifier
-
-**Classification Metrics:**
-```
-Accuracy:      62.5%
-Recall:        93.0%
-F1 Score:      ~73%
-ROC AUC:       ~0.86
-```
-
-**Business Metrics:**
-```
-Customers Correctly Identified as Churners:  348 (True Positives)
-Customers Saved through Intervention:        226 (65% success rate)
-Customers Lost (False Negatives):            26
-
-Total Retention Program Cost:                $85,100 (851 campaigns)
-Net Savings:                                 $367,300
-ROI:                                         431.6%
-```
-
-### Model Comparison
-
-Multiple models were evaluated (Logistic Regression, Random Forest, XGBoost, LightGBM) with focus on maximizing recall to catch as many churners as possible. **XGBoost** was selected as the best model based on its superior recall performance (93%) and strong business impact ($367,300 annual savings).
-
-**Key Tradeoff**: The model prioritizes recall (catching churners) over precision, accepting some false positives to minimize costly false negatives (missed churners). This design reflects the business reality that missing a churner ($1,500 loss) is far more expensive than unnecessary retention outreach (~$100 cost).
-
-## 🔧 Configuration
+## Configuration
 
 All configuration is centralized in `src/config.py`:
 
@@ -506,7 +437,9 @@ All configuration is centralized in `src/config.py`:
 - `RETENTION_COST = 100` - Cost per retention attempt ($)
 - `CHURN_COST = 1500` - Cost of customer churn ($)
 
-## 🧩 Dependencies
+---
+
+## Dependencies
 
 **Core Libraries:**
 - pandas, numpy - Data manipulation
@@ -526,95 +459,47 @@ All configuration is centralized in `src/config.py`:
 - jupyter - Notebook environment
 - joblib - Model serialization
 - tqdm - Progress bars
-- pyyaml - Configuration files
-
-## 📝 Code Quality
-
-- **Type Hints:** All functions include type annotations
-- **Docstrings:** Google-style docstrings throughout
-- **Logging:** Comprehensive logging with configurable levels
-- **Error Handling:** Try-except blocks for robustness
-- **Modularity:** Separate modules for each pipeline stage
-- **PEP 8 Compliance:** Following Python style guidelines
-
-## 🎓 Educational Value
-
-This project demonstrates:
-
-✅ End-to-end ML workflow
-✅ Production-quality code organization
-✅ Advanced feature engineering techniques
-✅ Hyperparameter optimization
-✅ Class imbalance handling
-✅ Model evaluation and selection
-✅ Explainable AI implementation
-✅ Interactive dashboard development
-✅ Business impact quantification
-✅ Clear documentation and communication
-
-## 🚧 Future Improvements
-
-1. **Model Enhancements:**
-   - Neural network models (MLP, TabNet)
-   - Ensemble stacking
-   - Time-series features (seasonality, trends)
-   - Customer interaction sequence modeling
-
-2. **Feature Engineering:**
-   - NLP on customer service notes
-   - Geographic/demographic enrichment
-   - Competitor pricing data
-   - Social network analysis
-
-3. **Deployment:**
-   - REST API for predictions
-   - Docker containerization
-   - CI/CD pipeline
-   - Model monitoring and retraining
-   - A/B testing framework
-
-4. **Dashboard:**
-   - User authentication
-   - Custom report generation
-   - Email alert integration
-   - Mobile responsiveness
-   - Real-time data integration
-
-5. **Advanced Analytics:**
-   - Customer lifetime value prediction
-   - Next best action recommendations
-   - Causal inference analysis
-   - Uplift modeling
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- **Dataset:** IBM Telco Customer Churn dataset
-- **SHAP:** Lundberg & Lee for the SHAP framework
-- **Community:** scikit-learn, XGBoost, LightGBM, and Streamlit teams
-
-## 📧 Contact
-
-**Noah Gallagher** | Data Scientist
-
-- **Email:** noahgallagher1@gmail.com
-- **GitHub:** [github.com/noahgallagher1](https://github.com/noahgallagher1)
-- **LinkedIn:** [linkedin.com/in/noahgallagher](https://www.linkedin.com/in/noahgallagher/)
-- **Portfolio:** [noahgallagher1.github.io/MySite](https://noahgallagher1.github.io/MySite/)
-- **This Project:** [github.com/noahgallagher1/customer-churn-prediction](https://github.com/noahgallagher1/customer-churn-prediction)
 
 ---
 
-**⭐ If you find this project helpful, please consider giving it a star!**
+## Code Quality Standards
 
-## 🔍 Troubleshooting
+- **Type Hints**: All functions include type annotations
+- **Docstrings**: Google-style docstrings throughout
+- **Logging**: Comprehensive logging with configurable levels
+- **Error Handling**: Try-except blocks for robustness
+- **Modularity**: Separate modules for each pipeline stage
+- **PEP 8 Compliance**: Following Python style guidelines
+
+---
+
+## Limitations & Future Work
+
+See [LIMITATIONS.md](LIMITATIONS.md) for comprehensive analysis of constraints and future improvements.
+
+**Key Limitations:**
+- No temporal validation (dataset has no date columns)
+- High false positive rate (50%) - acceptable given business context
+- Missing features (NPS, network quality, customer service interactions)
+- Static model - no online learning
+
+**Planned Improvements:**
+1. Neural network models (MLP, TabNet)
+2. Time-series features (seasonality, trends)
+3. REST API for predictions
+4. Docker containerization
+5. CI/CD pipeline
+6. Model monitoring and retraining framework
+7. Causal inference analysis
+8. Uplift modeling
+
+---
+
+## Troubleshooting
 
 ### Common Issues
 
-**1. Import errors after installation**
+**Import errors after installation**
 ```bash
 # Ensure virtual environment is activated
 source venv/bin/activate  # or venv\Scripts\activate on Windows
@@ -623,45 +508,54 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt --force-reinstall
 ```
 
-**2. Data download fails**
+**Data download fails**
 ```bash
-# Check internet connection
-# Try downloading manually from:
+# Download manually from:
 # https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv
 # Place in: data/raw/Telco-Customer-Churn.csv
 ```
 
-**3. Out of memory during training**
+**Out of memory during training**
 ```python
 # In src/config.py, reduce:
 N_ITER_SEARCH = 10  # instead of 20
 SHAP_SAMPLE_SIZE = 50  # instead of 100
 ```
 
-**4. Dashboard doesn't load**
+**Dashboard doesn't load**
 ```bash
 # Check port availability
-streamlit run src/dashboard.py --server.port 8502
+streamlit run app.py --server.port 8502
 
 # Clear Streamlit cache
 streamlit cache clear
 ```
 
-## 📊 Visualization Gallery
+---
 
-After running the pipeline, you'll find these visualizations in `outputs/figures/`:
+## Documentation
 
-1. `churn_distribution.png` - Overall churn rate
-2. `churn_by_demographics.png` - Churn across customer segments
-3. `churn_by_services.html` - Interactive service analysis
-4. `churn_by_contract_payment.png` - Contract and payment patterns
-5. `numerical_features_analysis.png` - Distribution analysis
-6. `correlation_heatmap.png` - Feature correlations
-7. `tenure_analysis.html` - Interactive tenure insights
-8. `shap_summary_plot.png` - Global feature importance
-9. `shap_bar_plot.png` - SHAP values ranking
-10. `shap_dependence_*.png` - Feature interaction plots
+- **[GLOSSARY.md](GLOSSARY.md)** - Standardized terminology and metric definitions
+- **[LIMITATIONS.md](LIMITATIONS.md)** - Comprehensive constraints analysis
+- **[EVALUATION_GUIDE.md](EVALUATION_GUIDE.md)** - Advanced evaluation usage guide
+- **[A_B_TEST_PLAN.md](A_B_TEST_PLAN.md)** - A/B test design document
+- **[DATA_SOURCE.md](DATA_SOURCE.md)** - Dataset documentation
+- **[RESULTS_REPRODUCIBILITY.md](RESULTS_REPRODUCIBILITY.md)** - Reproduction instructions
 
 ---
 
-**Built with ❤️ for the data science community**
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## Contact
+
+**Noah Gallagher** | Data Scientist
+
+- **Email**: noahgallagher1@gmail.com
+- **GitHub**: [github.com/noahgallagher1](https://github.com/noahgallagher1)
+- **LinkedIn**: [linkedin.com/in/noahgallagher](https://www.linkedin.com/in/noahgallagher/)
+- **Portfolio**: [noahgallagher1.github.io/MySite](https://noahgallagher1.github.io/MySite/)
+- **This Project**: [github.com/noahgallagher1/customer-churn-prediction](https://github.com/noahgallagher1/customer-churn-prediction)
