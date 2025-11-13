@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
 import seaborn as sns
-# import shap  # Temporarily disabled
+import shap
 import joblib
 from pathlib import Path
 import sys
