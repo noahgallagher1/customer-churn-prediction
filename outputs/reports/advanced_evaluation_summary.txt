@@ -39,13 +39,13 @@ XGBoost vs Logistic Regression:
 
 XGBoost vs Random Forest:
   Mean Difference: 0.0022
-  p-value: 0.0573
-  Significant: ❌ No
-  No significant difference
+  p-value: 0.0443
+  Significant: ✅ Yes
+  Model 1 is significantly better
 
 XGBoost vs LightGBM:
   Mean Difference: 0.0022
-  p-value: 0.2481
+  p-value: 0.1815
   Significant: ❌ No
   No significant difference
 
@@ -71,26 +71,51 @@ Comparison to No-Model Baseline:
 
 ### Contract Type
 
-       Segment    N  Churn Rate  Precision   Recall       F1     FPR
-Month-to-month 1409    0.265436   0.408931 0.930481 0.568163 0.48599
+       Segment   N  Churn Rate  Precision   Recall       F1      FPR
+Month-to-month 773    0.425614   0.440860 0.996960 0.611370 0.936937
+      Two year 336    0.026786   0.117647 0.222222 0.153846 0.045872
+      One year 300    0.120000   0.200000 0.500000 0.285714 0.272727
+
+**Best Performance**: Month-to-month (F1=0.611)
+**Worst Performance**: Two year (F1=0.154)
 
 ### Tenure Group
 
-   Segment   N  Churn Rate  Precision   Recall       F1      FPR
-<12 months 644    0.113354   0.240175 0.753425 0.364238 0.304729
+     Segment   N  Churn Rate  Precision   Recall       F1      FPR
+  >48 months 450    0.077778   0.180451 0.685714 0.285714 0.262651
+  <12 months 446    0.482063   0.523573 0.981395 0.682848 0.831169
+12-24 months 206    0.291262   0.364780 0.966667 0.529680 0.691781
+24-36 months 163    0.245399   0.413793 0.900000 0.566929 0.414634
+36-48 months 141    0.170213   0.275362 0.791667 0.408602 0.427350
+
+**Best Performance**: <12 months (F1=0.683)
+**Worst Performance**: >48 months (F1=0.286)
 
 ### Monthly Charges
 
-   Segment    N  Churn Rate  Precision   Recall       F1     FPR
-Low (<$35) 1409    0.265436   0.408931 0.930481 0.568163 0.48599
+         Segment   N  Churn Rate  Precision   Recall       F1      FPR
+   High ($70-90) 365    0.389041   0.523256 0.950704 0.675000 0.551570
+ Medium ($35-70) 362    0.243094   0.358079 0.931818 0.517350 0.536496
+      Low (<$35) 349    0.120344   0.319672 0.928571 0.475610 0.270358
+Very High (>$90) 333    0.306306   0.380165 0.901961 0.534884 0.649351
+
+**Best Performance**: High ($70-90) (F1=0.675)
+**Worst Performance**: Low (<$35) (F1=0.476)
 
 ### Gender
 
-Segment    N  Churn Rate  Precision   Recall       F1     FPR
-    0.0 1409    0.265436   0.408931 0.930481 0.568163 0.48599
+Segment   N  Churn Rate  Precision   Recall       F1      FPR
+   Male 722    0.250693   0.387097 0.928177 0.546341 0.491682
+ Female 687    0.280932   0.431655 0.932642 0.590164 0.479757
+
+**Best Performance**: Female (F1=0.590)
+**Worst Performance**: Male (F1=0.546)
 
 ### Senior Citizen
 
-Empty DataFrame
-Columns: [Segment, N, Churn Rate, Precision, Recall, F1, FPR]
-Index: []
+Segment    N  Churn Rate  Precision   Recall       F1      FPR
+     No 1187    0.232519   0.376312 0.909420 0.532344 0.456641
+    Yes  222    0.441441   0.527174 0.989796 0.687943 0.701613
+
+**Best Performance**: Yes (F1=0.688)
+**Worst Performance**: No (F1=0.532)

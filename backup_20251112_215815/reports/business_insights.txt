@@ -1,0 +1,14 @@
+KEY CHURN DRIVERS:
+
+25. Contract type significantly impacts churn - month-to-month contracts show higher risk
+24. Contract type significantly impacts churn - month-to-month contracts show higher risk
+16. Internet service type affects churn - fiber optic users may have different expectations
+23. StreamingMovies_Yes is a significant predictor of customer churn
+17. Internet service type affects churn - fiber optic users may have different expectations
+
+ACTIONABLE RECOMMENDATIONS:
+• Focus retention efforts on month-to-month contract customers
+• Offer discounts or value-added services to high monthly charge customers
+• Implement early engagement programs for new customers (low tenure)
+• Promote tech support and security services to at-risk customers
+• Encourage contract upgrades with incentives

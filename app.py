@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
 import seaborn as sns
-import shap
+# import shap  # Temporarily disabled
 import joblib
 from pathlib import Path
 import sys
@@ -281,8 +281,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-@st.cache_resource
+# # # @st.cache_resource
 def load_model_artifacts():
+    """Load trained model and preprocessing artifacts."""
+    import importlib
+    import sys
+    
+    # Force reload numpy to avoid cache issues
+    if 'numpy' in sys.modules:
+        importlib.reload(sys.modules['numpy'])
+    
+    """Load trained model and preprocessing artifacts."""
+    import importlib
+    import sys
+    
+    # Force reload numpy to avoid cache issues
+    if 'numpy' in sys.modules:
+        importlib.reload(sys.modules['numpy'])
+    
     """Load trained model and preprocessing artifacts."""
     try:
         model = joblib.load(config.MODEL_FILE)
