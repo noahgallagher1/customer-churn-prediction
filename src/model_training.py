@@ -292,51 +292,69 @@ def calculate_business_metrics(
     n_customers: int
 ) -> Dict[str, float]:
     """
-    Calculate business-relevant metrics.
+    Calculate business-relevant metrics using ENHANCED ROI calculation.
+
+    DEPRECATED OLD APPROACH: Previous version assumed 100% campaign success
+    and only counted TP campaigns, resulting in inflated metrics.
+
+    NEW APPROACH: Uses calculate_enhanced_roi() from model_evaluation.py
+    which properly accounts for:
+    - ALL campaigns (TP + FP), not just TP
+    - Realistic campaign success rate (65%, not 100%)
+    - Full cost accounting including wasted FP campaigns
 
     Args:
         metrics: Model evaluation metrics
         n_customers: Total number of customers
 
     Returns:
-        Dictionary of business metrics
+        Dictionary of business metrics (compatible format)
     """
+    from model_evaluation import calculate_enhanced_roi
+
     cm = metrics['confusion_matrix']
     tn, fp, fn, tp = cm.ravel()
 
-    # Calculate costs and savings
-    cost_of_false_negatives = fn * config.CHURN_COST
-    cost_of_retention_program = tp * config.RETENTION_COST
-    cost_of_false_positives = fp * config.RETENTION_COST
+    # Use ENHANCED ROI calculation (proper accounting)
+    enhanced_metrics = calculate_enhanced_roi(
+        TP=int(tp),
+        FP=int(fp),
+        FN=int(fn),
+        TN=int(tn),
+        clv=config.CUSTOMER_LIFETIME_VALUE,
+        campaign_cost=config.RETENTION_COST,
+        success_rate=0.65  # Realistic success rate
+    )
 
-    total_cost = cost_of_retention_program + cost_of_false_positives
-    potential_loss_prevented = tp * config.CHURN_COST
-    net_savings = potential_loss_prevented - total_cost
-    cost_without_model = (tp + fn) * config.CHURN_COST
-
-    roi = (net_savings / total_cost * 100) if total_cost > 0 else 0
-
+    # Convert to format expected by rest of pipeline
+    # (keeping same keys for backward compatibility)
     business_metrics = {
         'true_positives': int(tp),
         'false_positives': int(fp),
         'true_negatives': int(tn),
         'false_negatives': int(fn),
-        'cost_of_retention_program': cost_of_retention_program,
-        'cost_of_false_positives': cost_of_false_positives,
-        'cost_of_false_negatives': cost_of_false_negatives,
-        'potential_loss_prevented': potential_loss_prevented,
-        'net_savings': net_savings,
-        'cost_without_model': cost_without_model,
-        'roi_percentage': roi,
-        'customers_saved': int(tp),
-        'customers_lost': int(fn)
+        'cost_of_retention_program': enhanced_metrics['campaign_execution_cost'],
+        'cost_of_false_positives': int(fp) * config.RETENTION_COST,
+        'cost_of_false_negatives': int(fn) * config.CHURN_COST,
+        'potential_loss_prevented': enhanced_metrics['revenue_saved'],
+        'net_savings': enhanced_metrics['net_benefit'],
+        'cost_without_model': enhanced_metrics['baseline_loss_no_model'],
+        'roi_percentage': enhanced_metrics['roi_percentage'],
+        'customers_saved': int(enhanced_metrics['customers_saved']),  # TP * 0.65
+        'customers_lost': int(fn),
+        # Add new enhanced metrics
+        'total_campaigns': enhanced_metrics['total_campaigns'],
+        'campaign_success_rate': enhanced_metrics['campaign_success_rate']
     }
 
-    logger.info("Business Metrics:")
-    logger.info(f"  Net Savings: ${net_savings:,.2f}")
-    logger.info(f"  ROI: {roi:.2f}%")
-    logger.info(f"  Customers Saved: {tp}")
-    logger.info(f"  Customers Lost: {fn}")
+    logger.info("Business Metrics (Enhanced ROI Calculation):")
+    logger.info(f"  Total Campaigns: {business_metrics['total_campaigns']:,} (TP + FP)")
+    logger.info(f"  Customers Identified: {tp} (True Positives)")
+    logger.info(f"  Customers Saved: {business_metrics['customers_saved']:.0f} (TP × 65% success rate)")
+    logger.info(f"  Customers Lost: {fn} (False Negatives)")
+    logger.info(f"  Campaign Cost: ${business_metrics['cost_of_retention_program']:,.2f}")
+    logger.info(f"  Net Savings: ${business_metrics['net_savings']:,.2f}")
+    logger.info(f"  ROI: {business_metrics['roi_percentage']:.1f}%")
 
     return business_metrics
 

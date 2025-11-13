@@ -517,16 +517,16 @@ def analyze_all_segments(
     X_test: pd.DataFrame,
     y_test: pd.Series,
     y_pred: np.ndarray,
-    df_test: pd.DataFrame
+    df_test_raw: pd.DataFrame
 ) -> Dict[str, pd.DataFrame]:
     """
     Analyze performance across all important segments.
 
     Args:
-        X_test: Test features
+        X_test: Test features (scaled/encoded - not used, kept for compatibility)
         y_test: Test labels
         y_pred: Predictions
-        df_test: Original test dataframe with categorical features
+        df_test_raw: RAW test dataframe BEFORE encoding/scaling (with original values)
 
     Returns:
         Dictionary of segment analysis dataframes
@@ -537,29 +537,19 @@ def analyze_all_segments(
 
     segment_analyses = {}
 
-    # Analyze by Contract Type (if exists in original data)
-    contract_cols = [col for col in X_test.columns if 'Contract' in col]
-    if contract_cols:
-        # Reconstruct contract type from one-hot encoding
-        contract_types = []
-        for idx in range(len(X_test)):
-            if 'Contract_One year' in X_test.columns and X_test.iloc[idx]['Contract_One year'] == 1:
-                contract_types.append('One year')
-            elif 'Contract_Two year' in X_test.columns and X_test.iloc[idx]['Contract_Two year'] == 1:
-                contract_types.append('Two year')
-            else:
-                contract_types.append('Month-to-month')
+    # IMPORTANT: Use df_test_raw (raw data) for all segmentation
+    # This has original categorical values and unscaled numerical values
 
-        contract_series = pd.Series(contract_types, index=X_test.index)
+    # Analyze by Contract Type
+    if 'Contract' in df_test_raw.columns:
         segment_analyses['Contract Type'] = analyze_performance_by_segment(
-            y_test, y_pred, contract_series, 'Contract Type'
+            y_test, y_pred, df_test_raw['Contract'], 'Contract Type'
         )
 
-    # Analyze by Tenure Group
-    tenure = X_test['tenure'] if 'tenure' in X_test.columns else None
-    if tenure is not None:
+    # Analyze by Tenure Group (use ORIGINAL unscaled tenure values)
+    if 'tenure' in df_test_raw.columns:
         tenure_groups = pd.cut(
-            tenure,
+            df_test_raw['tenure'],  # ✅ Original values (months, not z-scores)
             bins=[0, 12, 24, 36, 48, np.inf],
             labels=['<12 months', '12-24 months', '24-36 months', '36-48 months', '>48 months']
         )
@@ -567,28 +557,28 @@ def analyze_all_segments(
             y_test, y_pred, tenure_groups, 'Tenure Group'
         )
 
-    # Analyze by Monthly Charges tier
-    if 'MonthlyCharges' in X_test.columns:
+    # Analyze by Monthly Charges tier (use ORIGINAL unscaled values)
+    if 'MonthlyCharges' in df_test_raw.columns:
         charge_tiers = pd.cut(
-            X_test['MonthlyCharges'],
-            bins=[-np.inf, 35, 70, 90, np.inf],
+            df_test_raw['MonthlyCharges'],  # ✅ Original values (dollars, not z-scores)
+            bins=[0, 35, 70, 90, np.inf],
             labels=['Low (<$35)', 'Medium ($35-70)', 'High ($70-90)', 'Very High (>$90)']
         )
         segment_analyses['Monthly Charges'] = analyze_performance_by_segment(
             y_test, y_pred, charge_tiers, 'Monthly Charges'
         )
 
-    # Analyze by Gender (if exists)
-    if 'gender' in X_test.columns:
+    # Analyze by Gender (use ORIGINAL categorical values)
+    if 'gender' in df_test_raw.columns:
         segment_analyses['Gender'] = analyze_performance_by_segment(
-            y_test, y_pred, X_test['gender'], 'Gender'
+            y_test, y_pred, df_test_raw['gender'], 'Gender'  # ✅ "Male"/"Female", not 0/1
         )
 
-    # Analyze by Senior Citizen status
-    if 'SeniorCitizen' in X_test.columns:
-        senior_labels = X_test['SeniorCitizen'].map({0: 'No', 1: 'Yes'})
+    # Analyze by Senior Citizen status (use ORIGINAL categorical values)
+    if 'SeniorCitizen' in df_test_raw.columns:
+        # Raw data has "Yes"/"No" after cleaning (see data_processing.py line 84-86)
         segment_analyses['Senior Citizen'] = analyze_performance_by_segment(
-            y_test, y_pred, senior_labels, 'Senior Citizen'
+            y_test, y_pred, df_test_raw['SeniorCitizen'], 'Senior Citizen'
         )
 
     return segment_analyses
