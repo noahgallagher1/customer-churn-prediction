@@ -668,7 +668,7 @@ def page_executive_summary():
     with col_right:
         st.markdown("### <i class='fas fa-hand-holding-usd icon-success fa-icon-lg'></i>Business Impact", unsafe_allow_html=True)
 
-        # ROI Calculation - Use enhanced ROI analysis if available (correct metrics)
+        # ROI Calculation - REQUIRE enhanced ROI analysis (correct metrics)
         if phase1_data and 'enhanced_roi' in phase1_data:
             roi_df = phase1_data['enhanced_roi']
             roi = roi_df['roi_percentage'].values[0]
@@ -676,10 +676,18 @@ def page_executive_summary():
             # Calculate customers lost as FN (from confusion matrix)
             customers_lost = int(roi_df['FN'].values[0])
         else:
-            # Fallback to old metrics if enhanced not available
-            roi = metrics.get('roi_percentage', 0)
-            customers_saved = metrics.get('customers_saved', 0)
-            customers_lost = metrics.get('customers_lost', 0)
+            # ✅ FAIL FAST - Don't silently use potentially incorrect fallback metrics
+            st.error("""
+                ⚠️ **Enhanced ROI Analysis Not Found**
+
+                The dashboard requires enhanced ROI metrics to ensure accuracy.
+                Legacy metrics may be incorrect (see SENIOR_DS_AUDIT_REPORT.md).
+
+                **Please run:** `python src/run_advanced_evaluation.py`
+
+                This will generate the required enhanced metrics in `outputs/reports/`.
+            """)
+            st.stop()
 
         # Create gauge chart for ROI with dynamic range
         # Calculate appropriate max range (at least 30% above actual value, minimum 300)
