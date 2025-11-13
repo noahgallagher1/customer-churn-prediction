@@ -268,15 +268,31 @@ def create_summary_report(baseline_results, ci_results, roi_results, segment_res
     for segment_name, df_segment in segment_results.items():
         report.append(f"### {segment_name}")
         report.append("")
+
+        if len(df_segment) == 0:
+            report.append("No segments found (possible data issue)")
+            report.append("")
+            continue
+
         report.append(df_segment.to_string(index=False))
         report.append("")
 
-        # Find best and worst performing segments
+        # Find best and worst performing segments (only if we have multiple segments)
         if len(df_segment) > 1:
             best_seg = df_segment.loc[df_segment['F1'].idxmax()]
             worst_seg = df_segment.loc[df_segment['F1'].idxmin()]
-            report.append(f"**Best Performance**: {best_seg['Segment']} (F1={best_seg['F1']:.3f})")
-            report.append(f"**Worst Performance**: {worst_seg['Segment']} (F1={worst_seg['F1']:.3f})")
+
+            # Only show if they're actually different
+            if best_seg['Segment'] != worst_seg['Segment']:
+                report.append(f"**Best Performance**: {best_seg['Segment']} (F1={best_seg['F1']:.3f})")
+                report.append(f"**Worst Performance**: {worst_seg['Segment']} (F1={worst_seg['F1']:.3f})")
+            else:
+                report.append(f"**Performance**: {best_seg['Segment']} (F1={best_seg['F1']:.3f})")
+            report.append("")
+        elif len(df_segment) == 1:
+            # Only one segment found
+            seg = df_segment.iloc[0]
+            report.append(f"**Note**: Only one segment found - {seg['Segment']} (F1={seg['F1']:.3f})")
             report.append("")
 
     # Save report
@@ -326,8 +342,32 @@ def main():
     y_pred = best_model.predict(X_test)
     y_pred_proba = best_model.predict_proba(X_test)[:, 1]
 
-    # Create test dataframe with original features for segment analysis
-    test_data = pd.read_csv(config.TEST_DATA_FILE)
+    # Load RAW data for segment analysis (BEFORE encoding/scaling)
+    # We need the original categorical values and unscaled numerical values
+    from data_processing import load_raw_data, clean_data, create_features
+
+    logger.info("Loading raw data for segment analysis...")
+    df_raw = load_raw_data()
+    df_raw = clean_data(df_raw)
+    df_raw = create_features(df_raw)
+
+    # Get the same test indices that were used in the train/test split
+    # We need to recreate the split to get the same indices
+    from sklearn.model_selection import train_test_split
+
+    # Separate features and target
+    X_raw = df_raw.drop(config.TARGET_COLUMN, axis=1)
+    y_raw = df_raw[config.TARGET_COLUMN].map({'Yes': 1, 'No': 0})
+
+    # Recreate the same split (same random_state ensures same indices)
+    _, X_test_raw, _, y_test_check = train_test_split(
+        X_raw, y_raw,
+        test_size=config.TEST_SIZE,
+        random_state=config.RANDOM_STATE,
+        stratify=y_raw
+    )
+
+    logger.info(f"Loaded raw test data: {X_test_raw.shape}")
 
     # 1. Baseline Evaluation
     baseline_results = run_baseline_evaluation(X_train, y_train, X_test, y_test)
@@ -338,8 +378,8 @@ def main():
     # 3. Confidence Intervals
     ci_results = run_confidence_interval_analysis(y_test, y_pred, y_pred_proba)
 
-    # 4. Segment Analysis
-    segment_results = run_segment_analysis(X_test, y_test, y_pred, test_data)
+    # 4. Segment Analysis (use raw unprocessed data)
+    segment_results = run_segment_analysis(X_test, y_test, y_pred, X_test_raw)
 
     # 5. Enhanced ROI Analysis
     roi_results, sensitivity_results = run_enhanced_roi_analysis(y_test, y_pred)
